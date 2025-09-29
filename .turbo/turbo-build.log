@@ -1,0 +1,39 @@
+
+> @digital-invoicing/frontend@1.0.0 build
+> next build
+
+   ▲ Next.js 14.0.0
+   - Environments: .env.local
+
+   Creating an optimized production build ...
+(node:7656) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+ ⚠ Compiled with warnings
+
+../../node_modules/next/dist/esm/shared/lib/router/utils/app-paths.js
+A Node.js module is loaded ('url' at line 3) which is not supported in the Edge Runtime.
+Learn More: https://nextjs.org/docs/messages/node-module-in-edge-runtime
+
+Import trace for requested module:
+../../node_modules/next/dist/esm/shared/lib/router/utils/app-paths.js
+
+   Linting and checking validity of types ...
+Failed to compile.
+
+./app/dashboard/tenants/[id]/users/page.tsx:112:45
+Type error: Spread types may only be created from object types.
+
+[0m [90m 110 |[39m       setFormData(prev [33m=>[39m ({[0m
+[0m [90m 111 |[39m         [33m...[39mprev[33m,[39m[0m
+[0m[31m[1m>[22m[39m[90m 112 |[39m         permissions[33m:[39m { [33m...[39mprev[33m.[39mpermissions[33m,[39m [33m...[39mvalue }[0m
+[0m [90m     |[39m                                             [31m[1m^[22m[39m[0m
+[0m [90m 113 |[39m       }))[33m;[39m[0m
+[0m [90m 114 |[39m     } [36melse[39m {[0m
+[0m [90m 115 |[39m       setFormData(prev [33m=>[39m ({ [33m...[39mprev[33m,[39m [field][33m:[39m value }))[33m;[39m[0m
+npm error Lifecycle script `build` failed with error:
+npm error code 1
+npm error path D:\Digital invoicing FBR\apps\frontend
+npm error workspace @digital-invoicing/frontend@1.0.0
+npm error location D:\Digital invoicing FBR\apps\frontend
+npm error command failed
+npm error command C:\WINDOWS\system32\cmd.exe /d /s /c next build

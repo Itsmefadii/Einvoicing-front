@@ -1,0 +1,8 @@
+{
+  "/dashboard/webhooks/page": "app/dashboard/webhooks/page.js",
+  "/dashboard/settings/page": "app/dashboard/settings/page.js",
+  "/dashboard/page": "app/dashboard/page.js",
+  "/dashboard/invoices/page": "app/dashboard/invoices/page.js",
+  "/dashboard/invoices/[id]/page": "app/dashboard/invoices/[id]/page.js",
+  "/dashboard/invoices/upload/page": "app/dashboard/invoices/upload/page.js"
+}
