@@ -1,4 +1,4 @@
-// File: D:\DigitalinvoicingFBR\apps\backup1\frontend\app\dashboard\layout.tsx
+// File: D:\My Projects\Einvoicing-front\app\dashboard\layout.tsx
 import * as entry from '../../../../app/dashboard/layout.js'
 import type { ResolvingMetadata, ResolvingViewport } from 'next/dist/lib/metadata/types/metadata-interface.js'
 

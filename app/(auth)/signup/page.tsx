@@ -20,13 +20,12 @@ interface SignupFormData {
   // Tenant Information
   tenantName: string;
   ntn: string;
-  strn: string;
   businessAddress: string;
   businessPhone: string;
   businessEmail: string;
   category: 'fmcg' | 'retailer' | 'distributer' | 'manufacture' | 'small_business';
   
-  // Admin User Information
+  // User Information
   firstName: string;
   lastName: string;
   email: string;
@@ -35,9 +34,8 @@ interface SignupFormData {
   confirmPassword: string;
   
   // FBR Configuration
-  fbrClientId: string;
-  fbrClientSecret: string;
-  environment: 'sandbox' | 'production';
+  fbrSandboxClientId: string;
+  fbrProductionClientId: string;
 }
 
 const tenantCategories = [
@@ -58,7 +56,6 @@ export default function SignupPage() {
   const [formData, setFormData] = useState<SignupFormData>({
     tenantName: '',
     ntn: '',
-    strn: '',
     businessAddress: '',
     businessPhone: '',
     businessEmail: '',
@@ -69,9 +66,8 @@ export default function SignupPage() {
     phone: '',
     password: '',
     confirmPassword: '',
-    fbrClientId: '',
-    fbrClientSecret: '',
-    environment: 'sandbox',
+    fbrSandboxClientId: '',
+    fbrProductionClientId: '',
   });
 
   const handleInputChange = (field: keyof SignupFormData, value: string) => {
@@ -94,8 +90,8 @@ export default function SignupPage() {
     if (!formData.email.trim()) newErrors.email = 'Email is required';
     if (!formData.password) newErrors.password = 'Password is required';
     if (!formData.confirmPassword) newErrors.confirmPassword = 'Confirm password is required';
-    if (!formData.fbrClientId.trim()) newErrors.fbrClientId = 'FBR Client ID is required';
-    if (!formData.fbrClientSecret.trim()) newErrors.fbrClientSecret = 'FBR Client Secret is required';
+    if (!formData.fbrSandboxClientId.trim()) newErrors.fbrSandboxClientId = 'FBR Sandbox Token is required';
+    if (!formData.fbrProductionClientId.trim()) newErrors.fbrProductionClientId = 'FBR Production Token is required';
 
     // Email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -143,16 +139,14 @@ export default function SignupPage() {
           // Tenant data
           name: formData.tenantName,
           ntn: formData.ntn,
-          strn: formData.strn,
           businessAddress: formData.businessAddress,
           businessPhone: formData.businessPhone,
           businessEmail: formData.businessEmail,
           category: formData.category,
-          fbrClientId: formData.fbrClientId,
-          fbrClientSecret: formData.fbrClientSecret,
-          environment: formData.environment,
+          fbrSandboxClientId: formData.fbrSandboxClientId,
+          fbrProductionClientId: formData.fbrProductionClientId,
           
-          // Admin user data
+          // User data
           adminUser: {
             firstName: formData.firstName,
             lastName: formData.lastName,
@@ -260,16 +254,6 @@ export default function SignupPage() {
                     )}
                   </div>
 
-                  <div>
-                    <Label htmlFor="strn">STRN (Sales Tax Registration Number)</Label>
-                    <Input
-                      id="strn"
-                      type="text"
-                      value={formData.strn}
-                      onChange={(e) => handleInputChange('strn', e.target.value)}
-                      placeholder="Enter STRN"
-                    />
-                  </div>
 
                   <div>
                     <Label htmlFor="businessEmail">Business Email *</Label>
@@ -310,11 +294,11 @@ export default function SignupPage() {
                 </div>
               </div>
 
-              {/* Admin User Information */}
+              {/* User Information */}
               <div className="space-y-4">
                 <h3 className="text-lg font-medium text-gray-900 flex items-center">
                   <UserIcon className="h-5 w-5 mr-2" />
-                  Admin User Information
+                  User Information
                 </h3>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -441,59 +425,34 @@ export default function SignupPage() {
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <Label htmlFor="fbrClientId">FBR Client ID *</Label>
+                    <Label htmlFor="fbrSandboxClientId">FBR Sandbox Token *</Label>
                     <Input
-                      id="fbrClientId"
+                      id="fbrSandboxClientId"
                       type="text"
-                      value={formData.fbrClientId}
-                      onChange={(e) => handleInputChange('fbrClientId', e.target.value)}
-                      placeholder="Enter FBR Client ID"
-                      className={errors.fbrClientId ? 'border-red-500' : ''}
+                      value={formData.fbrSandboxClientId}
+                      onChange={(e) => handleInputChange('fbrSandboxClientId', e.target.value)}
+                      placeholder="Enter FBR Sandbox Client ID"
+                      className={errors.fbrSandboxClientId ? 'border-red-500' : ''}
                     />
-                    {errors.fbrClientId && (
-                      <p className="text-red-500 text-sm mt-1">{errors.fbrClientId}</p>
+                    {errors.fbrSandboxClientId && (
+                      <p className="text-red-500 text-sm mt-1">{errors.fbrSandboxClientId}</p>
                     )}
                   </div>
 
                   <div>
-                    <Label htmlFor="environment">Environment *</Label>
-                    <Select
-                      value={formData.environment}
-                      onValueChange={(value) => handleInputChange('environment', value)}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select environment" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="sandbox">Sandbox (Testing)</SelectItem>
-                        <SelectItem value="production">Production (Live)</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <Label htmlFor="fbrProductionClientId">FBR Production Client ID *</Label>
+                    <Input
+                      id="fbrProductionClientId"
+                      type="text"
+                      value={formData.fbrProductionClientId}
+                      onChange={(e) => handleInputChange('fbrProductionClientId', e.target.value)}
+                      placeholder="Enter FBR Production Client ID"
+                      className={errors.fbrProductionClientId ? 'border-red-500' : ''}
+                    />
+                    {errors.fbrProductionClientId && (
+                      <p className="text-red-500 text-sm mt-1">{errors.fbrProductionClientId}</p>
+                    )}
                   </div>
-                </div>
-
-                <div>
-                  <Label htmlFor="fbrClientSecret">FBR Client Secret *</Label>
-                  <Input
-                    id="fbrClientSecret"
-                    type="password"
-                    value={formData.fbrClientSecret}
-                    onChange={(e) => handleInputChange('fbrClientSecret', e.target.value)}
-                    placeholder="Enter FBR Client Secret"
-                    className={errors.fbrClientSecret ? 'border-red-500' : ''}
-                  />
-                  {errors.fbrClientSecret && (
-                    <p className="text-red-500 text-sm mt-1">{errors.fbrClientSecret}</p>
-                  )}
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between">
-                <div className="text-sm">
-                  <span className="text-gray-600">Already have an account? </span>
-                  <Link href="/login" className="font-medium text-blue-600 hover:text-blue-500">
-                    Sign in
-                  </Link>
                 </div>
               </div>
 

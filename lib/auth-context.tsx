@@ -2,13 +2,12 @@
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { authManager, User, AuthSession } from './auth';
-import { sessionTimeoutManager } from './session-timeout';
 
 interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (ntn: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
   refreshSession: () => void;
 }
@@ -31,11 +30,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const login = async (ntn: string, password: string) => {
-    const result = await authManager.login(ntn, password);
+  const login = async (email: string, password: string) => {
+    const result = await authManager.login(email, password);
     if (result.success) {
       refreshSession();
-      sessionTimeoutManager.resetWarning();
     }
     return result;
   };
@@ -44,24 +42,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     authManager.logout();
     setUser(null);
     setIsAuthenticated(false);
-    sessionTimeoutManager.resetWarning();
   };
 
   useEffect(() => {
     // Initialize auth state on mount
     refreshSession();
     setIsLoading(false);
-
-    // Set up periodic session check
-    const interval = setInterval(() => {
-      const session = authManager.getSession();
-      if (!session) {
-        setUser(null);
-        setIsAuthenticated(false);
-      }
-    }, 60000); // Check every minute
-
-    return () => clearInterval(interval);
   }, []);
 
   const value: AuthContextType = {

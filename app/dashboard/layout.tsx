@@ -13,7 +13,12 @@ import {
   UserCircleIcon,
   ArrowLeftOnRectangleIcon,
   Bars3Icon,
-  XMarkIcon
+  XMarkIcon,
+  ClipboardDocumentListIcon,
+  Cog6ToothIcon,
+  ChartPieIcon,
+  UsersIcon,
+  BoltIcon
 } from '@heroicons/react/24/outline';
 import { useAuth } from '@/lib/auth-context';
 import { AuthGuard } from '@/components/auth/auth-guard';
@@ -29,15 +34,47 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const pathname = usePathname();
   const { user } = useAuth();
 
-  const navigation = [
-    { name: 'Dashboard', href: '/dashboard', icon: HomeIcon },
-    { name: 'Invoices', href: '/dashboard/invoices', icon: DocumentTextIcon },
-    { name: 'Integration', href: '/dashboard/fbr', icon: BuildingOfficeIcon },
-    { name: 'Reports', href: '/dashboard/reports', icon: ChartBarIcon },
-    { name: 'Tenants', href: '/dashboard/tenants', icon: BuildingOfficeIcon },
-    { name: 'Webhooks', href: '/dashboard/webhooks', icon: BellIcon },
-    { name: 'Settings', href: '/dashboard/settings', icon: CogIcon },
-  ];
+  // Icon mapping for permission keys
+  const iconMap: Record<string, any> = {
+    'dashboard': HomeIcon,
+    'invoices': DocumentTextIcon,
+    'fbr': BuildingOfficeIcon,
+    'integration': BuildingOfficeIcon,
+    'reports': ChartBarIcon,
+    'tenants': UsersIcon,
+    'webhooks': BoltIcon,
+    'settings': CogIcon,
+    'profile': UserCircleIcon,
+    'notifications': BellIcon,
+    'analytics': ChartPieIcon,
+    'documents': ClipboardDocumentListIcon,
+    'preferences': Cog6ToothIcon,
+  };
+
+  // Generate navigation from user permissions
+  const navigation = user?.permissions
+    ?.filter(permission => permission.isRender)
+    ?.sort((a, b) => a.position - b.position)
+    ?.map(permission => {
+      // Handle dynamic routes - convert [id] to a static path for navigation
+      let href = permission.path;
+      if (href.includes('[id]')) {
+        // For dynamic routes, use the parent path for navigation
+        if (href.includes('/invoices/[id]')) {
+          href = '/dashboard/invoices';
+        } else if (href.includes('/tenants/[id]/users')) {
+          href = '/dashboard/tenants';
+        }
+      }
+      
+      return {
+        name: permission.label,
+        href: href,
+        icon: iconMap[permission.key] || HomeIcon, // Fallback to HomeIcon if no mapping found
+        isDynamic: permission.path.includes('[id]'), // Flag to identify dynamic routes
+        originalPath: permission.path, // Keep original path for reference
+      };
+    }) || [];
 
   const isActive = (href: string) => {
     if (href === '/dashboard') {

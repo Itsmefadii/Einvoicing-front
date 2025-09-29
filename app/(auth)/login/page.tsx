@@ -9,7 +9,7 @@ import { useAuth } from '@/lib/auth-context'
 import { AuthGuard } from '@/components/auth/auth-guard'
 
 export default function LoginPage() {
-  const [ntn, setNtn] = useState('')
+  const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -21,7 +21,7 @@ export default function LoginPage() {
     setLoading(true)
     setError('')
 
-    const result = await login(ntn, password)
+    const result = await login(email, password)
     
     if (result.success) {
       router.push('/dashboard')
@@ -49,24 +49,22 @@ export default function LoginPage() {
             <CardHeader>
               <CardTitle>Login</CardTitle>
               <CardDescription>
-                Enter your NTN and password to access your account
+                Enter your email and password to access your account
               </CardDescription>
             </CardHeader>
             <CardContent>
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
-                  <label htmlFor="ntn" className="block text-sm font-medium text-gray-700">
-                    NTN (National Tax Number)
+                  <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+                    Email Address
                   </label>
                   <Input
-                    id="ntn"
-                    type="text"
-                    value={ntn}
-                    onChange={(e) => setNtn(e.target.value)}
-                    placeholder="Enter your 7-digit NTN"
+                    id="email"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="Enter your email address"
                     required
-                    pattern="[0-9]{7}"
-                    maxLength={7}
                   />
                 </div>
                 
@@ -104,7 +102,7 @@ export default function LoginPage() {
                 <p className="text-xs text-blue-700">
                   <strong>Development Mode:</strong> Use these credentials to access the demo:
                   <br />
-                  <strong>NTN:</strong> 1234567 | <strong>Password:</strong> password123
+                  <strong>Email:</strong> fahadiqbal@gmail.com | <strong>Password:</strong> [your password]
                 </p>
               </div>
             </CardContent>

@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server'
 function getApiBase(): string {
   const fromEnv = process.env.NEXT_PUBLIC_API_URL || ''
   const trimmed = fromEnv.replace(/\/$/, '')
-  return trimmed || 'http://localhost:8000'
+  return trimmed || 'http://localhost:3001/api/v1'
 }
 
 async function handle(request: NextRequest, { params }: { params: { path: string[] } }) {
