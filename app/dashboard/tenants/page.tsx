@@ -11,6 +11,11 @@ import {
   EyeIcon
 } from '@heroicons/react/24/outline';
 
+interface BusinessNature {
+  id: number;
+  businessnature: string;
+}
+
 interface Tenant {
   id: string;
   name: string;
@@ -19,7 +24,8 @@ interface Tenant {
   businessAddress?: string;
   businessPhone?: string;
   businessEmail?: string;
-  category: 'fmcg' | 'retailer' | 'distributer' | 'manufacture' | 'small_business';
+  businessNatureId: number;
+  businessNature?: string;
   environment: 'sandbox' | 'production';
   isActive: boolean;
   createdAt: string;
@@ -38,13 +44,6 @@ interface Tenant {
   };
 }
 
-const tenantCategories = {
-  fmcg: 'FMCG (Fast Moving Consumer Goods)',
-  retailer: 'Retailer',
-  distributer: 'Distributer',
-  manufacture: 'Manufacture',
-  small_business: 'Small Business',
-};
 
 export default function TenantsPage() {
   const [tenants, setTenants] = useState<Tenant[]>([]);
@@ -53,98 +52,101 @@ export default function TenantsPage() {
   // Mock data - replace with actual API call
   useEffect(() => {
     const mockTenants: Tenant[] = [
-      {
-        id: '1',
-        name: 'Tech Solutions',
-        ntn: '1234567-8',
-        strn: 'STRN-123456',
-        businessAddress: '123 Tech Street, Karachi',
-        businessPhone: '+92-300-1234567',
-        businessEmail: 'info@techsolutions.com',
-        category: 'small_business',
-        environment: 'production',
-        isActive: true,
-        createdAt: '2025-01-15',
-        updatedAt: '2025-08-16',
-        users: [
           {
             id: '1',
-            email: 'admin@techsolutions.com',
-            firstName: 'John',
-            lastName: 'Doe',
-            role: 'admin',
+            name: 'Tech Solutions',
+            ntn: '1234567-8',
+            strn: 'STRN-123456',
+            businessAddress: '123 Tech Street, Karachi',
+            businessPhone: '+92-300-1234567',
+            businessEmail: 'info@techsolutions.com',
+            businessNatureId: 6, // Service Provider
+            businessNature: 'Service Provider',
+            environment: 'production',
             isActive: true,
+            createdAt: '2025-01-15',
+            updatedAt: '2025-08-16',
+            users: [
+              {
+                id: '1',
+                email: 'admin@techsolutions.com',
+                firstName: 'John',
+                lastName: 'Doe',
+                role: 'admin',
+                isActive: true,
+              },
+              {
+                id: '2',
+                email: 'user@techsolutions.com',
+                firstName: 'Jane',
+                lastName: 'Smith',
+                role: 'user',
+                isActive: true,
+              },
+            ],
+            _count: {
+              invoices: 1247,
+              users: 2,
+            },
           },
           {
             id: '2',
-            email: 'user@techsolutions.com',
-            firstName: 'Jane',
-            lastName: 'Smith',
-            role: 'user',
+            name: 'ABC Trading',
+            ntn: '8765432-1',
+            strn: 'STRN-654321',
+            businessAddress: '456 Trade Avenue, Lahore',
+            businessPhone: '+92-300-7654321',
+            businessEmail: 'contact@abctrading.com',
+            businessNatureId: 5, // Retailer
+            businessNature: 'Retailer',
+            environment: 'sandbox',
             isActive: true,
+            createdAt: '2025-02-20',
+            updatedAt: '2025-08-16',
+            users: [
+              {
+                id: '3',
+                email: 'admin@abctrading.com',
+                firstName: 'Ahmed',
+                lastName: 'Khan',
+                role: 'admin',
+                isActive: true,
+              },
+            ],
+            _count: {
+              invoices: 456,
+              users: 1,
+            },
           },
-        ],
-        _count: {
-          invoices: 1247,
-          users: 2,
-        },
-      },
-      {
-        id: '2',
-        name: 'ABC Trading',
-        ntn: '8765432-1',
-        strn: 'STRN-654321',
-        businessAddress: '456 Trade Avenue, Lahore',
-        businessPhone: '+92-300-7654321',
-        businessEmail: 'contact@abctrading.com',
-        category: 'retailer',
-        environment: 'sandbox',
-        isActive: true,
-        createdAt: '2025-02-20',
-        updatedAt: '2025-08-16',
-        users: [
           {
             id: '3',
-            email: 'admin@abctrading.com',
-            firstName: 'Ahmed',
-            lastName: 'Khan',
-            role: 'admin',
-            isActive: true,
-          },
-        ],
-        _count: {
-          invoices: 456,
-          users: 1,
-        },
-      },
-      {
-        id: '3',
-        name: 'XYZ Corporation',
-        ntn: '1122334-5',
-        strn: 'STRN-112233',
-        businessAddress: '789 Corporate Plaza, Islamabad',
-        businessPhone: '+92-300-1122334',
-        businessEmail: 'info@xyzcorp.com',
-        category: 'manufacture',
-        environment: 'production',
-        isActive: false,
-        createdAt: '2025-03-10',
-        updatedAt: '2025-08-16',
-        users: [
-          {
-            id: '4',
-            email: 'admin@xyzcorp.com',
-            firstName: 'Sarah',
-            lastName: 'Johnson',
-            role: 'admin',
+            name: 'XYZ Corporation',
+            ntn: '1122334-5',
+            strn: 'STRN-112233',
+            businessAddress: '789 Corporate Plaza, Islamabad',
+            businessPhone: '+92-300-1122334',
+            businessEmail: 'info@xyzcorp.com',
+            businessNatureId: 7, // Manufacture
+            businessNature: 'Manufacture',
+            environment: 'production',
             isActive: false,
+            createdAt: '2025-03-10',
+            updatedAt: '2025-08-16',
+            users: [
+              {
+                id: '4',
+                email: 'admin@xyzcorp.com',
+                firstName: 'Sarah',
+                lastName: 'Johnson',
+                role: 'admin',
+                isActive: false,
+              },
+            ],
+            _count: {
+              invoices: 234,
+              users: 1,
+            },
           },
-        ],
-        _count: {
-          invoices: 234,
-          users: 1,
-        },
-      },
     ];
 
     setTenants(mockTenants);
@@ -159,13 +161,16 @@ export default function TenantsPage() {
     });
   };
 
-  const getCategoryColor = (category: string) => {
-    switch (category) {
-      case 'fmcg': return 'bg-purple-100 text-purple-800';
-      case 'retailer': return 'bg-blue-100 text-blue-800';
-      case 'distributer': return 'bg-green-100 text-green-800';
-      case 'manufacture': return 'bg-orange-100 text-orange-800';
-      case 'small_business': return 'bg-gray-100 text-gray-800';
+  const getCategoryColor = (businessNature: string) => {
+    switch (businessNature) {
+      case 'Exporter': return 'bg-purple-100 text-purple-800';
+      case 'Importer': return 'bg-blue-100 text-blue-800';
+      case 'Distributor': return 'bg-green-100 text-green-800';
+      case 'Wholesaler': return 'bg-yellow-100 text-yellow-800';
+      case 'Retailer': return 'bg-indigo-100 text-indigo-800';
+      case 'Service Provider': return 'bg-pink-100 text-pink-800';
+      case 'Manufacture': return 'bg-orange-100 text-orange-800';
+      case 'Other': return 'bg-gray-100 text-gray-800';
       default: return 'bg-gray-100 text-gray-800';
     }
   };
@@ -284,7 +289,7 @@ export default function TenantsPage() {
                     Tenant
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Category
+                    Business Nature
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     NTN
@@ -327,8 +332,8 @@ export default function TenantsPage() {
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getCategoryColor(tenant.category)}`}>
-                        {tenantCategories[tenant.category]}
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getCategoryColor(tenant.businessNature || 'Other')}`}>
+                        {tenant.businessNature || 'Unknown'}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">

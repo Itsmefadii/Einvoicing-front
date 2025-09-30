@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { 
@@ -15,6 +15,12 @@ import { Button } from '@/app/components/ui/button';
 import { Input } from '@/app/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/app/components/ui/select';
 import { Label } from '@/app/components/ui/label';
+import { dataService } from '@/lib/data-service';
+
+interface BusinessNature {
+  id: number;
+  businessnature: string;
+}
 
 interface SignupFormData {
   // Tenant Information
@@ -23,7 +29,7 @@ interface SignupFormData {
   businessAddress: string;
   businessPhone: string;
   businessEmail: string;
-  category: 'fmcg' | 'retailer' | 'distributer' | 'manufacture' | 'small_business';
+  businessNatureId: number;
   
   // User Information
   firstName: string;
@@ -38,13 +44,6 @@ interface SignupFormData {
   fbrProductionClientId: string;
 }
 
-const tenantCategories = [
-  { value: 'fmcg', label: 'FMCG (Fast Moving Consumer Goods)' },
-  { value: 'retailer', label: 'Retailer' },
-  { value: 'distributer', label: 'Distributer' },
-  { value: 'manufacture', label: 'Manufacture' },
-  { value: 'small_business', label: 'Small Business' },
-];
 
 export default function SignupPage() {
   const router = useRouter();
@@ -52,6 +51,8 @@ export default function SignupPage() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<Partial<SignupFormData>>({});
+  const [businessNatures, setBusinessNatures] = useState<BusinessNature[]>([]);
+  const [loadingBusinessNatures, setLoadingBusinessNatures] = useState(true);
 
   const [formData, setFormData] = useState<SignupFormData>({
     tenantName: '',
@@ -59,7 +60,7 @@ export default function SignupPage() {
     businessAddress: '',
     businessPhone: '',
     businessEmail: '',
-    category: 'small_business',
+    businessNatureId: 0,
     firstName: '',
     lastName: '',
     email: '',
@@ -70,7 +71,28 @@ export default function SignupPage() {
     fbrProductionClientId: '',
   });
 
-  const handleInputChange = (field: keyof SignupFormData, value: string) => {
+  // Fetch business natures on component mount
+  useEffect(() => {
+    const fetchBusinessNatures = async () => {
+      try {
+        setLoadingBusinessNatures(true);
+        const natures = await dataService.getBusinessNatures();
+        setBusinessNatures(natures);
+        // Set default selection to first item
+        if (natures.length > 0) {
+          setFormData(prev => ({ ...prev, businessNatureId: natures[0].id }));
+        }
+      } catch (error) {
+        console.error('Failed to fetch business natures:', error);
+      } finally {
+        setLoadingBusinessNatures(false);
+      }
+    };
+
+    fetchBusinessNatures();
+  }, []);
+
+  const handleInputChange = (field: keyof SignupFormData, value: string | number) => {
     setFormData(prev => ({ ...prev, [field]: value }));
     // Clear error when user starts typing
     if (errors[field]) {
@@ -85,6 +107,7 @@ export default function SignupPage() {
     if (!formData.tenantName.trim()) newErrors.tenantName = 'Tenant name is required';
     if (!formData.ntn.trim()) newErrors.ntn = 'NTN is required';
     if (!formData.businessEmail.trim()) newErrors.businessEmail = 'Business email is required';
+    if (!formData.businessNatureId || formData.businessNatureId === 0) (newErrors as any).businessNatureId = 'Business nature is required';
     if (!formData.firstName.trim()) newErrors.firstName = 'First name is required';
     if (!formData.lastName.trim()) newErrors.lastName = 'Last name is required';
     if (!formData.email.trim()) newErrors.email = 'Email is required';
@@ -142,7 +165,7 @@ export default function SignupPage() {
           businessAddress: formData.businessAddress,
           businessPhone: formData.businessPhone,
           businessEmail: formData.businessEmail,
-          category: formData.category,
+          businessNatureId: formData.businessNatureId,
           fbrSandboxClientId: formData.fbrSandboxClientId,
           fbrProductionClientId: formData.fbrProductionClientId,
           
@@ -221,22 +244,26 @@ export default function SignupPage() {
                   </div>
 
                   <div>
-                    <Label htmlFor="category">Business Category *</Label>
+                    <Label htmlFor="businessNature">Business Nature *</Label>
                     <Select
-                      value={formData.category}
-                      onValueChange={(value) => handleInputChange('category', value)}
+                      value={formData.businessNatureId.toString()}
+                      onValueChange={(value) => handleInputChange('businessNatureId', parseInt(value))}
+                      disabled={loadingBusinessNatures}
                     >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select category" />
+                      <SelectTrigger className={errors.businessNatureId ? 'border-red-500' : ''}>
+                        <SelectValue placeholder={loadingBusinessNatures ? "Loading..." : "Select business nature"} />
                       </SelectTrigger>
                       <SelectContent>
-                        {tenantCategories.map((category) => (
-                          <SelectItem key={category.value} value={category.value}>
-                            {category.label}
+                        {businessNatures.map((nature) => (
+                          <SelectItem key={nature.id} value={nature.id.toString()}>
+                            {nature.businessnature}
                           </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
+                    {errors.businessNatureId && (
+                      <p className="text-red-500 text-sm mt-1">{errors.businessNatureId}</p>
+                    )}
                   </div>
 
                   <div>

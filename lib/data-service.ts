@@ -245,6 +245,48 @@ class DataService {
     const timestamp = new Date().toISOString().split('T')[0];
     return `dashboard-report-${timestamp}.${format}`;
   }
+
+  async getBusinessNatures(): Promise<{ id: number; businessnature: string }[]> {
+    try {
+      // Get token from localStorage
+      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+      
+      // Call your actual API endpoint
+      const response = await fetch('http://localhost:3001/api/v1/system-configs/business-natures', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token && { 'Authorization': `Bearer ${token}` }),
+        },
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        return data.data;
+      } else {
+        throw new Error(data.message || 'Failed to fetch business natures');
+      }
+    } catch (error) {
+      console.error('Error fetching business natures:', error);
+      console.log('Using fallback data for business natures');
+      // Return fallback data in case of error
+      return [
+        { id: 1, businessnature: 'Exporter' },
+        { id: 2, businessnature: 'Importer' },
+        { id: 3, businessnature: 'Distributor' },
+        { id: 4, businessnature: 'Wholesaler' },
+        { id: 5, businessnature: 'Retailer' },
+        { id: 6, businessnature: 'Service Provider' },
+        { id: 7, businessnature: 'Manufacture' },
+        { id: 8, businessnature: 'Other' }
+      ];
+    }
+  }
 }
 
 export const dataService = DataService.getInstance();
