@@ -24,6 +24,7 @@ import { useAuth } from '@/lib/auth-context';
 import { AuthGuard } from '@/components/auth/auth-guard';
 import { LogoutButton } from '@/components/auth/logout-button';
 import { UserProfile } from '@/components/auth/user-profile';
+import { RouteGuard } from '@/lib/route-guard';
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -85,7 +86,8 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
   return (
     <AuthGuard>
-      <div className="min-h-screen bg-gray-50">
+      <RouteGuard>
+        <div className="min-h-screen bg-gray-50">
       {/* Mobile sidebar */}
       <div className={`fixed inset-0 z-50 lg:hidden ${sidebarOpen ? 'block' : 'hidden'}`}>
         <div className="fixed inset-0 bg-gray-600 bg-opacity-75" onClick={() => setSidebarOpen(false)} />
@@ -203,6 +205,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         </main>
       </div>
     </div>
+      </RouteGuard>
     </AuthGuard>
   );
 }

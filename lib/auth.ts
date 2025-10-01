@@ -13,9 +13,35 @@ export interface Permission {
 export interface User {
   id: number;
   email: string;
-  name: string;
+  firstName: string;
+  lastName: string;
+  fullName: string;
+  phoneNumber: string;
   roleId: number;
+  roleName: string;
   sellerId: number | null;
+  sellerData?: {
+    id: number;
+    sellerCode: string;
+    businessName: string;
+    ntnCnic: string;
+    businessNatureId: number;
+    businessNature: string;
+    industryId: number;
+    industryName: string;
+    address1: string;
+    address2: string;
+    city: string;
+    stateId: number;
+    state: string;
+    postalCode: string;
+    businessPhone: string;
+    businessEmail: string;
+    fbrSandBoxToken: string;
+    fbrProdToken: string;
+    logoUrl: string | null;
+    isActive: boolean;
+  };
   permissions: Permission[];
 }
 

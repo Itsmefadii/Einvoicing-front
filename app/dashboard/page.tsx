@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { 
   DocumentTextIcon, 
   BuildingOfficeIcon, 
@@ -34,6 +35,9 @@ interface RecentActivity {
 }
 
 export default function DashboardPage() {
+  const searchParams = useSearchParams();
+  const [showAccessDenied, setShowAccessDenied] = useState(false);
+
   const [stats, setStats] = useState<DashboardStats>({
     totalInvoices: 1247,
     totalSellers: 23,
@@ -85,13 +89,18 @@ export default function DashboardPage() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    // Check for access denied error
+    if (searchParams.get('error') === 'access_denied') {
+      setShowAccessDenied(true);
+    }
+
     // Simulate loading
     const timer = setTimeout(() => {
       setIsLoading(false);
     }, 1000);
 
     return () => clearTimeout(timer);
-  }, []);
+  }, [searchParams]);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-PK', {
@@ -139,6 +148,33 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
+      {/* Access Denied Alert */}
+      {showAccessDenied && (
+        <div className="bg-red-50 border border-red-200 rounded-md p-4">
+          <div className="flex">
+            <div className="flex-shrink-0">
+              <ExclamationTriangleIcon className="h-5 w-5 text-red-400" />
+            </div>
+            <div className="ml-3">
+              <h3 className="text-sm font-medium text-red-800">
+                Access Denied
+              </h3>
+              <div className="mt-2 text-sm text-red-700">
+                <p>You don't have permission to access that page. You've been redirected to the dashboard.</p>
+              </div>
+              <div className="mt-4">
+                <button
+                  onClick={() => setShowAccessDenied(false)}
+                  className="bg-red-50 px-2 py-1.5 rounded-md text-sm font-medium text-red-800 hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-red-50 focus:ring-red-600"
+                >
+                  Dismiss
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Page header */}
       <div className="sm:flex sm:items-center sm:justify-between">
         <div>
