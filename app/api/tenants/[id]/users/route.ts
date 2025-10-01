@@ -9,7 +9,7 @@ export async function POST(
   try {
     const body = await request.json();
     
-    const response = await fetch(`${API_BASE_URL}/tenants/${params.id}/users`, {
+    const response = await fetch(`${API_BASE_URL}/sellers/${params.id}/users`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -41,7 +41,7 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    const response = await fetch(`${API_BASE_URL}/tenants/${params.id}/users`, {
+    const response = await fetch(`${API_BASE_URL}/sellers/${params.id}/users`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',

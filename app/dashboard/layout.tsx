@@ -41,7 +41,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     'fbr': BuildingOfficeIcon,
     'integration': BuildingOfficeIcon,
     'reports': ChartBarIcon,
-    'tenants': UsersIcon,
+    'sellers': UsersIcon,
     'webhooks': BoltIcon,
     'settings': CogIcon,
     'profile': UserCircleIcon,
@@ -62,8 +62,8 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         // For dynamic routes, use the parent path for navigation
         if (href.includes('/invoices/[id]')) {
           href = '/dashboard/invoices';
-        } else if (href.includes('/tenants/[id]/users')) {
-          href = '/dashboard/tenants';
+        } else if (href.includes('/sellers/[id]/users')) {
+          href = '/dashboard/sellers';
         }
       }
       

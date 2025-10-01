@@ -6,7 +6,7 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     
-    // For tenant creation, we should use the /auth/register endpoint instead of /tenants
+    // For seller creation, we should use the /auth/register endpoint instead of /sellers
     const response = await fetch(`${API_BASE_URL}/auth/register`, {
       method: 'POST',
       headers: {
@@ -32,7 +32,7 @@ export async function POST(request: NextRequest) {
       
       return NextResponse.json(
         { 
-          message: error.message || 'Failed to create tenant',
+          message: error.message || 'Failed to create seller',
           status: 'error'
         },
         { status: response.status }
@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
     const data = await response.json();
     return NextResponse.json(data);
   } catch (error) {
-    console.error('Tenant creation error:', error);
+    console.error('Seller creation error:', error);
     return NextResponse.json(
       { 
         message: 'Internal server error',
@@ -56,8 +56,8 @@ export async function POST(request: NextRequest) {
 
 export async function GET() {
   try {
-    const url = `${API_BASE_URL}/tenants`;
-    console.log('Frontend API: Attempting to fetch tenants from:', url);
+    const url = `${API_BASE_URL}/sellers`;
+    console.log('Frontend API: Attempting to fetch sellers from:', url);
     console.log('Frontend API: API_BASE_URL:', API_BASE_URL);
     
     const response = await fetch(url, {
@@ -79,7 +79,7 @@ export async function GET() {
         return NextResponse.json(
           { 
             message: 'Authentication required',
-            error: 'Please log in to access tenant data',
+            error: 'Please log in to access seller data',
             status: 'unauthorized'
           },
           { status: 401 }
@@ -88,7 +88,7 @@ export async function GET() {
       
       return NextResponse.json(
         { 
-          message: error.message || 'Failed to fetch tenants',
+          message: error.message || 'Failed to fetch sellers',
           status: 'error',
           backendStatus: response.status
         },
@@ -100,7 +100,7 @@ export async function GET() {
     console.log('Frontend API: Success response:', data);
     return NextResponse.json(data);
   } catch (error) {
-    console.error('Frontend API: Tenant fetch error:', error);
+    console.error('Frontend API: Seller fetch error:', error);
     return NextResponse.json(
       { 
         message: 'Internal server error',

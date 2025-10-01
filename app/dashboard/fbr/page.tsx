@@ -13,8 +13,8 @@ import {
 } from '@heroicons/react/24/outline';
 
 interface FbrStatus {
-  tenantId: string;
-  tenantName: string;
+  sellerId: string;
+  sellerName: string;
   environment: 'sandbox' | 'production';
   connectionStatus: 'connected' | 'disconnected' | 'error';
   lastConnected: string;
@@ -36,8 +36,8 @@ export default function FbrIntegrationPage() {
   useEffect(() => {
     const mockFbrStatuses: FbrStatus[] = [
       {
-        tenantId: '1',
-        tenantName: 'Tech Solutions',
+        sellerId: '1',
+        sellerName: 'Tech Solutions',
         environment: 'production',
         connectionStatus: 'connected',
         lastConnected: '2025-08-16T10:30:00Z',
@@ -50,8 +50,8 @@ export default function FbrIntegrationPage() {
         failedSubmissions: 19,
       },
       {
-        tenantId: '2',
-        tenantName: 'ABC Trading',
+        sellerId: '2',
+        sellerName: 'ABC Trading',
         environment: 'sandbox',
         connectionStatus: 'connected',
         lastConnected: '2025-08-16T09:45:00Z',
@@ -64,8 +64,8 @@ export default function FbrIntegrationPage() {
         failedSubmissions: 22,
       },
       {
-        tenantId: '3',
-        tenantName: 'XYZ Corporation',
+        sellerId: '3',
+        sellerName: 'XYZ Corporation',
         environment: 'production',
         connectionStatus: 'error',
         lastConnected: '2025-08-16T08:15:00Z',
@@ -150,15 +150,15 @@ export default function FbrIntegrationPage() {
     });
   };
 
-  const handleRefreshToken = async (tenantId: string) => {
-    setRefreshing(tenantId);
+  const handleRefreshToken = async (sellerId: string) => {
+    setRefreshing(sellerId);
     // Simulate API call
     await new Promise(resolve => setTimeout(resolve, 2000));
     setRefreshing(null);
     
     // Update the status
     setFbrStatuses(prev => prev.map(status => 
-      status.tenantId === tenantId 
+      status.sellerId === sellerId 
         ? { ...status, tokenStatus: 'valid', connectionStatus: 'connected' }
         : status
     ));
@@ -179,7 +179,7 @@ export default function FbrIntegrationPage() {
         <div>
           <h1 className="text-2xl font-bold text-gray-900">FBR Integration</h1>
           <p className="mt-2 text-sm text-gray-700">
-            Monitor and manage FBR integration status across all tenants.
+            Monitor and manage FBR integration status across all sellers.
           </p>
         </div>
         <div className="mt-4 sm:mt-0">
@@ -200,7 +200,7 @@ export default function FbrIntegrationPage() {
               </div>
               <div className="ml-5 w-0 flex-1">
                 <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">Total Tenants</dt>
+                  <dt className="text-sm font-medium text-gray-500 truncate">Total Sellers</dt>
                   <dd className="text-lg font-medium text-gray-900">{fbrStatuses.length}</dd>
                 </dl>
               </div>
@@ -266,13 +266,13 @@ export default function FbrIntegrationPage() {
       {/* FBR Status Table */}
       <div className="bg-white shadow rounded-lg overflow-hidden">
         <div className="px-4 py-5 sm:p-6">
-          <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">Tenant FBR Status</h3>
+          <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">Seller FBR Status</h3>
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Tenant
+                    Seller
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Environment
@@ -296,7 +296,7 @@ export default function FbrIntegrationPage() {
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {fbrStatuses.map((status) => (
-                  <tr key={status.tenantId} className="hover:bg-gray-50">
+                  <tr key={status.sellerId} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
                         <div className="flex-shrink-0 h-10 w-10">
@@ -305,8 +305,8 @@ export default function FbrIntegrationPage() {
                           </div>
                         </div>
                         <div className="ml-4">
-                          <div className="text-sm font-medium text-gray-900">{status.tenantName}</div>
-                          <div className="text-sm text-gray-500">ID: {status.tenantId}</div>
+                          <div className="text-sm font-medium text-gray-900">{status.sellerName}</div>
+                          <div className="text-sm text-gray-500">ID: {status.sellerId}</div>
                         </div>
                       </div>
                     </td>
@@ -368,11 +368,11 @@ export default function FbrIntegrationPage() {
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <div className="flex items-center space-x-2">
                         <button
-                          onClick={() => handleRefreshToken(status.tenantId)}
-                          disabled={refreshing === status.tenantId}
+                          onClick={() => handleRefreshToken(status.sellerId)}
+                          disabled={refreshing === status.sellerId}
                           className="inline-flex items-center px-3 py-1 border border-transparent text-xs font-medium rounded text-blue-700 bg-blue-100 hover:bg-blue-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
                         >
-                          {refreshing === status.tenantId ? (
+                          {refreshing === status.sellerId ? (
                             <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600 mr-1"></div>
                           ) : (
                             <ArrowPathIcon className="h-3 w-3 mr-1" />

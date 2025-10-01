@@ -9,7 +9,7 @@ export async function PATCH(
   try {
     const body = await request.json();
     
-    const response = await fetch(`${API_BASE_URL}/tenants/${params.id}/users/${params.userId}`, {
+    const response = await fetch(`${API_BASE_URL}/sellers/${params.id}/users/${params.userId}`, {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
@@ -41,7 +41,7 @@ export async function DELETE(
   { params }: { params: { id: string; userId: string } }
 ) {
   try {
-    const response = await fetch(`${API_BASE_URL}/tenants/${params.id}/users/${params.userId}`, {
+    const response = await fetch(`${API_BASE_URL}/sellers/${params.id}/users/${params.userId}`, {
       method: 'DELETE',
       headers: {
         'Content-Type': 'application/json',

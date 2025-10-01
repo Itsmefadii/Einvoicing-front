@@ -1,3 +1,10 @@
 {
-  "/(auth)/signup/page": "app/(auth)/signup/page.js"
+  "/(auth)/login/page": "app/(auth)/login/page.js",
+  "/(auth)/signup/page": "app/(auth)/signup/page.js",
+  "/dashboard/page": "app/dashboard/page.js",
+  "/dashboard/tenants/page": "app/dashboard/tenants/page.js",
+  "/dashboard/sellers/page": "app/dashboard/sellers/page.js",
+  "/dashboard/invoices/page": "app/dashboard/invoices/page.js",
+  "/dashboard/invoices/create/page": "app/dashboard/invoices/create/page.js",
+  "/dashboard/invoices/upload/page": "app/dashboard/invoices/upload/page.js"
 }

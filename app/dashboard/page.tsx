@@ -17,7 +17,7 @@ import {
 
 interface DashboardStats {
   totalInvoices: number;
-  totalTenants: number;
+  totalSellers: number;
   issuedInvoices: number;
   pendingInvoices: number;
   failedInvoices: number;
@@ -27,7 +27,7 @@ interface DashboardStats {
 
 interface RecentActivity {
   id: string;
-  type: 'invoice_created' | 'invoice_issued' | 'fbr_submission' | 'tenant_added';
+  type: 'invoice_created' | 'invoice_issued' | 'fbr_submission' | 'seller_added';
   message: string;
   timestamp: string;
   status: 'success' | 'warning' | 'error';
@@ -36,7 +36,7 @@ interface RecentActivity {
 export default function DashboardPage() {
   const [stats, setStats] = useState<DashboardStats>({
     totalInvoices: 1247,
-    totalTenants: 23,
+    totalSellers: 23,
     issuedInvoices: 892,
     pendingInvoices: 156,
     failedInvoices: 45,
@@ -68,8 +68,8 @@ export default function DashboardPage() {
     },
     {
       id: '4',
-      type: 'tenant_added',
-      message: 'New tenant "XYZ Trading" added to the platform',
+      type: 'seller_added',
+      message: 'New seller "XYZ Trading" added to the platform',
       timestamp: '2 hours ago',
       status: 'success',
     },
@@ -122,7 +122,7 @@ export default function DashboardPage() {
         return <CheckCircleIcon className="h-5 w-5 text-green-500" />;
       case 'fbr_submission':
         return <BuildingOfficeIcon className="h-5 w-5 text-purple-500" />;
-      case 'tenant_added':
+      case 'seller_added':
         return <BuildingOfficeIcon className="h-5 w-5 text-indigo-500" />;
       default:
         return <DocumentTextIcon className="h-5 w-5 text-gray-500" />;
@@ -184,7 +184,7 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Total Tenants */}
+        {/* Total Sellers */}
         <div className="bg-white overflow-hidden shadow rounded-lg">
           <div className="p-5">
             <div className="flex items-center">
@@ -193,16 +193,16 @@ export default function DashboardPage() {
               </div>
               <div className="ml-5 w-0 flex-1">
                 <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">Active Tenants</dt>
-                  <dd className="text-lg font-medium text-gray-900">{stats.totalTenants}</dd>
+                  <dt className="text-sm font-medium text-gray-500 truncate">Active Sellers</dt>
+                  <dd className="text-lg font-medium text-gray-900">{stats.totalSellers}</dd>
                 </dl>
               </div>
             </div>
           </div>
           <div className="bg-gray-50 px-5 py-3">
             <div className="text-sm">
-              <Link href="/dashboard/tenants" className="font-medium text-blue-700 hover:text-blue-900">
-                Manage tenants
+              <Link href="/dashboard/sellers" className="font-medium text-blue-700 hover:text-blue-900">
+                Manage sellers
               </Link>
             </div>
           </div>
@@ -326,11 +326,11 @@ export default function DashboardPage() {
                 Upload Excel File
               </Link>
               <Link
-                href="/dashboard/tenants"
+                href="/dashboard/sellers"
                 className="flex items-center p-3 text-sm font-medium text-gray-700 bg-gray-50 rounded-md hover:bg-gray-100 transition-colors"
               >
                 <BuildingOfficeIcon className="h-5 w-5 text-purple-500 mr-3" />
-                Manage Tenants
+                Manage Sellers
               </Link>
               <Link
                 href="/dashboard/fbr"

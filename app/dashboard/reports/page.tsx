@@ -179,11 +179,11 @@ export default function ReportsPage() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Active Tenants</CardTitle>
+            <CardTitle className="text-sm font-medium">Active Sellers</CardTitle>
             <BuildingOfficeIcon className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{reportData.topTenants.length}</div>
+            <div className="text-2xl font-bold">{reportData.topSellers.length}</div>
             <p className="text-xs text-muted-foreground">
               +2 new this month
             </p>
@@ -217,28 +217,28 @@ export default function ReportsPage() {
           </CardContent>
         </Card>
 
-        {/* Top Tenants */}
+        {/* Top Sellers */}
         <Card>
           <CardHeader>
-            <CardTitle>Top Performing Tenants</CardTitle>
-            <CardDescription>Tenants with highest invoice volume and revenue</CardDescription>
+            <CardTitle>Top Performing Sellers</CardTitle>
+            <CardDescription>Sellers with highest invoice volume and revenue</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {reportData.topTenants.slice(0, 5).map((tenant, index) => (
-                <div key={tenant.name} className="flex items-center justify-between">
+              {reportData.topSellers.slice(0, 5).map((seller, index) => (
+                <div key={seller.name} className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">
                     <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center">
                       <span className="text-xs font-medium">{index + 1}</span>
                     </div>
                     <div>
-                      <div className="text-sm font-medium">{tenant.name}</div>
-                      <div className="text-xs text-gray-500">{formatNumber(tenant.invoices)} invoices</div>
+                      <div className="text-sm font-medium">{seller.name}</div>
+                      <div className="text-xs text-gray-500">{formatNumber(seller.invoices)} invoices</div>
                     </div>
                   </div>
                   <div className="text-right">
-                    <div className="text-sm font-medium">{formatCurrency(tenant.revenue)}</div>
-                    <div className="text-xs text-green-600">{tenant.successRate}% success</div>
+                    <div className="text-sm font-medium">{formatCurrency(seller.revenue)}</div>
+                    <div className="text-xs text-green-600">{seller.successRate}% success</div>
                   </div>
                 </div>
               ))}

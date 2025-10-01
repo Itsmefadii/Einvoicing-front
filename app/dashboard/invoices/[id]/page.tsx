@@ -23,7 +23,7 @@ type FbrResponse = {
 
 type Invoice = {
   id: string
-  tenantId: string
+  sellerId: string
   invoiceNo: string
   customerName: string
   customerNtn?: string | null
@@ -42,7 +42,7 @@ type Invoice = {
   fbrResponse?: FbrResponse | null
 }
 
-type Tenant = {
+type Seller = {
   id: string
   name: string
   ntn?: string
@@ -108,10 +108,10 @@ function formatCurrency(amount: number, currency: string) {
   }
 }
 
-function loadLayoutConfig(tenantId: string | undefined): SectionKey[] {
-  if (!tenantId || typeof window === 'undefined') return ['seller', 'buyer', 'products', 'bank', 'tax']
+function loadLayoutConfig(sellerId: string | undefined): SectionKey[] {
+  if (!sellerId || typeof window === 'undefined') return ['seller', 'buyer', 'products', 'bank', 'tax']
   try {
-    const stored = localStorage.getItem(`invoice_view_layout_${tenantId}`)
+    const stored = localStorage.getItem(`invoice_view_layout_${sellerId}`)
     if (!stored) return ['seller', 'buyer', 'products', 'bank', 'tax']
     const parsed = JSON.parse(stored) as SectionKey[]
     const defaults: SectionKey[] = ['seller', 'buyer', 'products', 'bank', 'tax']
@@ -124,9 +124,9 @@ function loadLayoutConfig(tenantId: string | undefined): SectionKey[] {
   }
 }
 
-function saveLayoutConfig(tenantId: string | undefined, layout: SectionKey[]) {
-  if (!tenantId || typeof window === 'undefined') return
-  localStorage.setItem(`invoice_view_layout_${tenantId}`, JSON.stringify(layout))
+function saveLayoutConfig(sellerId: string | undefined, layout: SectionKey[]) {
+  if (!sellerId || typeof window === 'undefined') return
+  localStorage.setItem(`invoice_view_layout_${sellerId}`, JSON.stringify(layout))
 }
 
 function defaultFieldVisibility(): FieldVisibility {
@@ -160,12 +160,12 @@ function defaultFieldVisibility(): FieldVisibility {
   }
 }
 
-function loadFieldVisibility(tenantId: string | undefined): FieldVisibility {
-  if (!tenantId || typeof window === 'undefined') {
+function loadFieldVisibility(sellerId: string | undefined): FieldVisibility {
+  if (!sellerId || typeof window === 'undefined') {
     return defaultFieldVisibility()
   }
   try {
-    const stored = localStorage.getItem(`invoice_view_fields_${tenantId}`)
+    const stored = localStorage.getItem(`invoice_view_fields_${sellerId}`)
     if (!stored) return defaultFieldVisibility()
     const parsed = JSON.parse(stored) as Partial<FieldVisibility>
     return { ...defaultFieldVisibility(), ...parsed }
@@ -174,14 +174,14 @@ function loadFieldVisibility(tenantId: string | undefined): FieldVisibility {
   }
 }
 
-function saveFieldVisibility(tenantId: string | undefined, vis: FieldVisibility) {
-  if (!tenantId || typeof window === 'undefined') return
-  localStorage.setItem(`invoice_view_fields_${tenantId}`, JSON.stringify(vis))
+function saveFieldVisibility(sellerId: string | undefined, vis: FieldVisibility) {
+  if (!sellerId || typeof window === 'undefined') return
+  localStorage.setItem(`invoice_view_fields_${sellerId}`, JSON.stringify(vis))
 }
 
 export default function InvoiceViewPage({ params }: { params: { id: string } }) {
   const [invoice, setInvoice] = useState<Invoice | null>(null)
-  const [tenant, setTenant] = useState<Tenant | null>(null)
+  const [seller, setTenant] = useState<Tenant | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [layout, setLayout] = useState<SectionKey[]>(['seller', 'buyer', 'products', 'tax'])
@@ -194,7 +194,7 @@ export default function InvoiceViewPage({ params }: { params: { id: string } }) 
     setError(null)
 
     const dummyTenant: Tenant = {
-      id: 'tenant-1',
+      id: 'seller-1',
       name: 'Demo Company Pvt Ltd',
       ntn: '1234567-8',
       strn: '77-123-4567-890',
@@ -213,7 +213,7 @@ export default function InvoiceViewPage({ params }: { params: { id: string } }) 
 
     const dummyInvoice: Invoice = {
       id: params.id,
-      tenantId: dummyTenant.id,
+      sellerId: dummyTenant.id,
       invoiceNo: 'INV-2025-0012',
       customerName: 'ABC Trading Co.',
       customerNtn: '7654321-0',
@@ -440,8 +440,8 @@ export default function InvoiceViewPage({ params }: { params: { id: string } }) 
 
     setTenant(dummyTenant)
     setInvoice(dummyInvoice)
-    setLayout(loadLayoutConfig(dummyInvoice.tenantId))
-    setVisibility(loadFieldVisibility(dummyInvoice.tenantId))
+    setLayout(loadLayoutConfig(dummyInvoice.sellerId))
+    setVisibility(loadFieldVisibility(dummyInvoice.sellerId))
     setIsLoading(false)
   }, [params.id])
 
@@ -460,7 +460,7 @@ export default function InvoiceViewPage({ params }: { params: { id: string } }) 
       if (newIndex < 0 || newIndex >= next.length) return prev
       const [spliced] = next.splice(index, 1)
       next.splice(newIndex, 0, spliced)
-      saveLayoutConfig(invoice?.tenantId, next)
+      saveLayoutConfig(invoice?.sellerId, next)
       return next
     })
   }
@@ -473,25 +473,25 @@ export default function InvoiceViewPage({ params }: { params: { id: string } }) 
           {visibility.sellerName && (
             <div>
               <div className="text-gray-500">Name</div>
-              <div className="text-gray-900">{tenant?.name || '—'}</div>
+              <div className="text-gray-900">{seller?.name || '—'}</div>
             </div>
           )}
           {visibility.sellerNtnStrn && (
             <div>
               <div className="text-gray-500">NTN / STRN</div>
-              <div className="text-gray-900">{tenant?.ntn || '—'}{tenant?.strn ? ` / ${tenant.strn}` : ''}</div>
+              <div className="text-gray-900">{seller?.ntn || '—'}{seller?.strn ? ` / ${seller.strn}` : ''}</div>
             </div>
           )}
           {visibility.sellerAddress && (
             <div>
               <div className="text-gray-500">Address</div>
-              <div className="text-gray-900">{tenant?.businessAddress || '—'}</div>
+              <div className="text-gray-900">{seller?.businessAddress || '—'}</div>
             </div>
           )}
           {visibility.sellerContact && (
             <div>
               <div className="text-gray-500">Contact</div>
-              <div className="text-gray-900">{tenant?.businessEmail || '—'}{tenant?.businessPhone ? ` / ${tenant.businessPhone}` : ''}</div>
+              <div className="text-gray-900">{seller?.businessEmail || '—'}{seller?.businessPhone ? ` / ${seller.businessPhone}` : ''}</div>
             </div>
           )}
         </div>
@@ -573,7 +573,7 @@ export default function InvoiceViewPage({ params }: { params: { id: string } }) 
 
       <div className="bg-white shadow rounded-lg">
         <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
-          <div className="text-sm text-gray-700">Reorder sections (saved per tenant)</div>
+          <div className="text-sm text-gray-700">Reorder sections (saved per seller)</div>
           <div className="flex items-center gap-2">
             {layout.map((key, idx) => (
               <div key={key} className="flex items-center gap-1">
@@ -597,7 +597,7 @@ export default function InvoiceViewPage({ params }: { params: { id: string } }) 
                   ['sellerContact','Contact'],
                 ].map(([key,label]) => (
                   <label key={key} className="flex items-center gap-2 mb-1">
-                    <input type="checkbox" checked={(visibility as any)[key]} onChange={(e)=>{ const next={...visibility,[key as keyof FieldVisibility]: e.target.checked} as FieldVisibility; setVisibility(next); saveFieldVisibility(invoice?.tenantId,next) }} />
+                    <input type="checkbox" checked={(visibility as any)[key]} onChange={(e)=>{ const next={...visibility,[key as keyof FieldVisibility]: e.target.checked} as FieldVisibility; setVisibility(next); saveFieldVisibility(invoice?.sellerId,next) }} />
                     <span>{label}</span>
                   </label>
                 ))}
@@ -611,7 +611,7 @@ export default function InvoiceViewPage({ params }: { params: { id: string } }) 
                   ['buyerContact','Contact'],
                 ].map(([key,label]) => (
                   <label key={key} className="flex items-center gap-2 mb-1">
-                    <input type="checkbox" checked={(visibility as any)[key]} onChange={(e)=>{ const next={...visibility,[key as keyof FieldVisibility]: e.target.checked} as FieldVisibility; setVisibility(next); saveFieldVisibility(invoice?.tenantId,next) }} />
+                    <input type="checkbox" checked={(visibility as any)[key]} onChange={(e)=>{ const next={...visibility,[key as keyof FieldVisibility]: e.target.checked} as FieldVisibility; setVisibility(next); saveFieldVisibility(invoice?.sellerId,next) }} />
                     <span>{label}</span>
                   </label>
                 ))}
@@ -628,7 +628,7 @@ export default function InvoiceViewPage({ params }: { params: { id: string } }) 
                   ['bankAddress','Bank Address'],
                 ].map(([key,label]) => (
                   <label key={key} className="flex items-center gap-2 mb-1">
-                    <input type="checkbox" checked={(visibility as any)[key]} onChange={(e)=>{ const next={...visibility,[key as keyof FieldVisibility]: e.target.checked} as FieldVisibility; setVisibility(next); saveFieldVisibility(invoice?.tenantId,next) }} />
+                    <input type="checkbox" checked={(visibility as any)[key]} onChange={(e)=>{ const next={...visibility,[key as keyof FieldVisibility]: e.target.checked} as FieldVisibility; setVisibility(next); saveFieldVisibility(invoice?.sellerId,next) }} />
                     <span>{label}</span>
                   </label>
                 ))}
@@ -644,7 +644,7 @@ export default function InvoiceViewPage({ params }: { params: { id: string } }) 
                   ['productsTotal','Total'],
                 ].map(([key,label]) => (
                   <label key={key} className="flex items-center gap-2 mb-1">
-                    <input type="checkbox" checked={(visibility as any)[key]} onChange={(e)=>{ const next={...visibility,[key as keyof FieldVisibility]: e.target.checked} as FieldVisibility; setVisibility(next); saveFieldVisibility(invoice?.tenantId,next) }} />
+                    <input type="checkbox" checked={(visibility as any)[key]} onChange={(e)=>{ const next={...visibility,[key as keyof FieldVisibility]: e.target.checked} as FieldVisibility; setVisibility(next); saveFieldVisibility(invoice?.sellerId,next) }} />
                     <span>{label}</span>
                   </label>
                 ))}
@@ -659,7 +659,7 @@ export default function InvoiceViewPage({ params }: { params: { id: string } }) 
                   ['taxIrn','IRN'],
                 ].map(([key,label]) => (
                   <label key={key} className="flex items-center gap-2 mb-1">
-                    <input type="checkbox" checked={(visibility as any)[key]} onChange={(e)=>{ const next={...visibility,[key as keyof FieldVisibility]: e.target.checked} as FieldVisibility; setVisibility(next); saveFieldVisibility(invoice?.tenantId,next) }} />
+                    <input type="checkbox" checked={(visibility as any)[key]} onChange={(e)=>{ const next={...visibility,[key as keyof FieldVisibility]: e.target.checked} as FieldVisibility; setVisibility(next); saveFieldVisibility(invoice?.sellerId,next) }} />
                     <span>{label}</span>
                   </label>
                 ))}
@@ -710,43 +710,43 @@ export default function InvoiceViewPage({ params }: { params: { id: string } }) 
                             {visibility.bankName && (
                               <div>
                                 <div className="text-gray-500">Bank</div>
-                                <div className="text-gray-900">{tenant?.bankName || '—'}</div>
+                                <div className="text-gray-900">{seller?.bankName || '—'}</div>
                               </div>
                             )}
                             {visibility.bankAccountTitle && (
                               <div>
                                 <div className="text-gray-500">Account Title</div>
-                                <div className="text-gray-900">{tenant?.accountTitle || '—'}</div>
+                                <div className="text-gray-900">{seller?.accountTitle || '—'}</div>
                               </div>
                             )}
                             {visibility.bankAccountNumber && (
                               <div>
                                 <div className="text-gray-500">Account Number</div>
-                                <div className="text-gray-900">{tenant?.accountNumber || '—'}</div>
+                                <div className="text-gray-900">{seller?.accountNumber || '—'}</div>
                               </div>
                             )}
                             {visibility.bankIban && (
                               <div>
                                 <div className="text-gray-500">IBAN</div>
-                                <div className="text-gray-900 break-all">{tenant?.iban || '—'}</div>
+                                <div className="text-gray-900 break-all">{seller?.iban || '—'}</div>
                               </div>
                             )}
                             {visibility.bankBranch && (
                               <div>
                                 <div className="text-gray-500">Branch</div>
-                                <div className="text-gray-900">{tenant?.branch || '—'}</div>
+                                <div className="text-gray-900">{seller?.branch || '—'}</div>
                               </div>
                             )}
                             {visibility.bankSwift && (
                               <div>
                                 <div className="text-gray-500">SWIFT</div>
-                                <div className="text-gray-900">{tenant?.swiftCode || '—'}</div>
+                                <div className="text-gray-900">{seller?.swiftCode || '—'}</div>
                               </div>
                             )}
                             {visibility.bankAddress && (
                               <div className="sm:col-span-2">
                                 <div className="text-gray-500">Bank Address</div>
-                                <div className="text-gray-900">{tenant?.bankAddress || '—'}</div>
+                                <div className="text-gray-900">{seller?.bankAddress || '—'}</div>
                               </div>
                             )}
                           </div>
@@ -832,32 +832,32 @@ export default function InvoiceViewPage({ params }: { params: { id: string } }) 
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
                             <div>
                               <div className="text-gray-500">Bank</div>
-                              <div className="text-gray-900">{tenant?.bankName || '—'}</div>
+                              <div className="text-gray-900">{seller?.bankName || '—'}</div>
                             </div>
                             <div>
                               <div className="text-gray-500">Account Title</div>
-                              <div className="text-gray-900">{tenant?.accountTitle || '—'}</div>
+                              <div className="text-gray-900">{seller?.accountTitle || '—'}</div>
                             </div>
                             <div>
                               <div className="text-gray-500">Account Number</div>
-                              <div className="text-gray-900">{tenant?.accountNumber || '—'}</div>
+                              <div className="text-gray-900">{seller?.accountNumber || '—'}</div>
                             </div>
                             <div>
                               <div className="text-gray-500">IBAN</div>
-                              <div className="text-gray-900 break-all">{tenant?.iban || '—'}</div>
+                              <div className="text-gray-900 break-all">{seller?.iban || '—'}</div>
                             </div>
                             <div>
                               <div className="text-gray-500">Branch</div>
-                              <div className="text-gray-900">{tenant?.branch || '—'}</div>
+                              <div className="text-gray-900">{seller?.branch || '—'}</div>
                             </div>
                             <div>
                               <div className="text-gray-500">SWIFT</div>
-                              <div className="text-gray-900">{tenant?.swiftCode || '—'}</div>
+                              <div className="text-gray-900">{seller?.swiftCode || '—'}</div>
                             </div>
                             {visibility.bankAddress && (
                               <div className="sm:col-span-2">
                                 <div className="text-gray-500">Bank Address</div>
-                                <div className="text-gray-900">{tenant?.bankAddress || '—'}</div>
+                                <div className="text-gray-900">{seller?.bankAddress || '—'}</div>
                               </div>
                             )}
                           </div>
@@ -878,32 +878,32 @@ export default function InvoiceViewPage({ params }: { params: { id: string } }) 
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
                         <div>
                           <div className="text-gray-500">Bank</div>
-                          <div className="text-gray-900">{tenant?.bankName || '—'}</div>
+                          <div className="text-gray-900">{seller?.bankName || '—'}</div>
                         </div>
                         <div>
                           <div className="text-gray-500">Account Title</div>
-                          <div className="text-gray-900">{tenant?.accountTitle || '—'}</div>
+                          <div className="text-gray-900">{seller?.accountTitle || '—'}</div>
                         </div>
                         <div>
                           <div className="text-gray-500">Account Number</div>
-                          <div className="text-gray-900">{tenant?.accountNumber || '—'}</div>
+                          <div className="text-gray-900">{seller?.accountNumber || '—'}</div>
                         </div>
                         <div>
                           <div className="text-gray-500">IBAN</div>
-                          <div className="text-gray-900 break-all">{tenant?.iban || '—'}</div>
+                          <div className="text-gray-900 break-all">{seller?.iban || '—'}</div>
                         </div>
                         <div>
                           <div className="text-gray-500">Branch</div>
-                          <div className="text-gray-900">{tenant?.branch || '—'}</div>
+                          <div className="text-gray-900">{seller?.branch || '—'}</div>
                         </div>
                         <div>
                           <div className="text-gray-500">SWIFT</div>
-                          <div className="text-gray-900">{tenant?.swiftCode || '—'}</div>
+                          <div className="text-gray-900">{seller?.swiftCode || '—'}</div>
                         </div>
                         {visibility.bankAddress && (
                           <div className="sm:col-span-2">
                             <div className="text-gray-500">Bank Address</div>
-                            <div className="text-gray-900">{tenant?.bankAddress || '—'}</div>
+                            <div className="text-gray-900">{seller?.bankAddress || '—'}</div>
                           </div>
                         )}
                       </div>

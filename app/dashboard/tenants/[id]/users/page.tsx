@@ -85,9 +85,9 @@ const defaultPermissions = {
   fbr: false,
 };
 
-export default function TenantUsersPage() {
+export default function SellerUsersPage() {
   const params = useParams();
-  const tenantId = params.id as string;
+  const sellerId = params.id as string;
 
   const [users, setUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -107,11 +107,11 @@ export default function TenantUsersPage() {
 
   useEffect(() => {
     loadUsers();
-  }, [tenantId]);
+  }, [sellerId]);
 
   const loadUsers = async () => {
     try {
-      const response = await fetch(`/api/tenants/${tenantId}/users`);
+      const response = await fetch(`/api/sellers/${sellerId}/users`);
       if (response.ok) {
         const data = await response.json();
         setUsers(data);
@@ -180,7 +180,7 @@ export default function TenantUsersPage() {
     setIsCreating(true);
 
     try {
-      const response = await fetch(`/api/tenants/${tenantId}/users`, {
+      const response = await fetch(`/api/sellers/${sellerId}/users`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -216,7 +216,7 @@ export default function TenantUsersPage() {
 
   const handleToggleUserStatus = async (userId: string, isActive: boolean) => {
     try {
-      const response = await fetch(`/api/tenants/${tenantId}/users/${userId}`, {
+      const response = await fetch(`/api/sellers/${sellerId}/users/${userId}`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
@@ -245,7 +245,7 @@ export default function TenantUsersPage() {
     }
 
     try {
-      const response = await fetch(`/api/tenants/${tenantId}/users/${userId}`, {
+      const response = await fetch(`/api/sellers/${sellerId}/users/${userId}`, {
         method: "DELETE",
       });
 
@@ -299,7 +299,7 @@ export default function TenantUsersPage() {
         <div>
           <h1 className="text-2xl font-bold text-gray-900">User Management</h1>
           <p className="mt-2 text-sm text-gray-700">
-            Manage users and their permissions for this tenant.
+            Manage users and their permissions for this seller.
           </p>
         </div>
         <div className="mt-4 sm:mt-0">
@@ -401,7 +401,7 @@ export default function TenantUsersPage() {
         <Card>
           <CardHeader>
             <CardTitle>Create New User</CardTitle>
-            <CardDescription>Add a new user to this tenant</CardDescription>
+            <CardDescription>Add a new user to this seller</CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleCreateUser} className="space-y-4">

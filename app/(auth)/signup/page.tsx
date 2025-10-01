@@ -15,6 +15,7 @@ import { Button } from '@/app/components/ui/button';
 import { Input } from '@/app/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/app/components/ui/select';
 import { Label } from '@/app/components/ui/label';
+import { SuccessModal } from '@/app/components/ui/success-modal';
 import { dataService } from '@/lib/data-service';
 
 interface BusinessNature {
@@ -22,14 +23,30 @@ interface BusinessNature {
   businessnature: string;
 }
 
+interface Industry {
+  id: number;
+  industryName: string;
+}
+
+interface State {
+  id: number;
+  state: string;
+  stateCode: number;
+}
+
 interface SignupFormData {
-  // Tenant Information
-  tenantName: string;
+  // Seller Information
+  sellerName: string;
   ntn: string;
-  businessAddress: string;
+  businessAddress1: string;
+  businessAddress2: string;
+  city: string;
+  stateId: number;
+  postalCode: string;
   businessPhone: string;
   businessEmail: string;
   businessNatureId: number;
+  industryId: number;
   
   // User Information
   firstName: string;
@@ -52,15 +69,25 @@ export default function SignupPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<Partial<SignupFormData>>({});
   const [businessNatures, setBusinessNatures] = useState<BusinessNature[]>([]);
+  const [industries, setIndustries] = useState<Industry[]>([]);
+  const [states, setStates] = useState<State[]>([]);
   const [loadingBusinessNatures, setLoadingBusinessNatures] = useState(true);
+  const [loadingIndustries, setLoadingIndustries] = useState(true);
+  const [loadingStates, setLoadingStates] = useState(true);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
 
   const [formData, setFormData] = useState<SignupFormData>({
-    tenantName: '',
+    sellerName: '',
     ntn: '',
-    businessAddress: '',
+    businessAddress1: '',
+    businessAddress2: '',
+    city: '',
+    stateId: 0,
+    postalCode: '',
     businessPhone: '',
     businessEmail: '',
     businessNatureId: 0,
+    industryId: 0,
     firstName: '',
     lastName: '',
     email: '',
@@ -71,25 +98,44 @@ export default function SignupPage() {
     fbrProductionClientId: '',
   });
 
-  // Fetch business natures on component mount
+  // Fetch business natures, industries, and states on component mount
   useEffect(() => {
-    const fetchBusinessNatures = async () => {
+    const fetchData = async () => {
       try {
         setLoadingBusinessNatures(true);
+        setLoadingIndustries(true);
+        setLoadingStates(true);
+        
+        // Fetch business natures
         const natures = await dataService.getBusinessNatures();
         setBusinessNatures(natures);
-        // Set default selection to first item
         if (natures.length > 0) {
           setFormData(prev => ({ ...prev, businessNatureId: natures[0].id }));
         }
+        
+        // Fetch industries
+        const industries = await dataService.getIndustries();
+        setIndustries(industries);
+        if (industries.length > 0) {
+          setFormData(prev => ({ ...prev, industryId: industries[0].id }));
+        }
+        
+        // Fetch states
+        const states = await dataService.getStates();
+        setStates(states);
+        if (states.length > 0) {
+          setFormData(prev => ({ ...prev, stateId: states[0].id }));
+        }
       } catch (error) {
-        console.error('Failed to fetch business natures:', error);
+        console.error('Failed to fetch data:', error);
       } finally {
         setLoadingBusinessNatures(false);
+        setLoadingIndustries(false);
+        setLoadingStates(false);
       }
     };
 
-    fetchBusinessNatures();
+    fetchData();
   }, []);
 
   const handleInputChange = (field: keyof SignupFormData, value: string | number) => {
@@ -104,10 +150,16 @@ export default function SignupPage() {
     const newErrors: Partial<SignupFormData> = {};
 
     // Required fields validation
-    if (!formData.tenantName.trim()) newErrors.tenantName = 'Tenant name is required';
+    if (!formData.sellerName.trim()) newErrors.sellerName = 'Seller name is required';
     if (!formData.ntn.trim()) newErrors.ntn = 'NTN is required';
     if (!formData.businessEmail.trim()) newErrors.businessEmail = 'Business email is required';
+    if (!formData.businessPhone.trim()) newErrors.businessPhone = 'Business phone is required';
+    if (!formData.businessAddress1.trim()) newErrors.businessAddress1 = 'Address 1 is required';
+    if (!formData.city.trim()) newErrors.city = 'City is required';
+    if (!formData.stateId || formData.stateId === 0) (newErrors as any).stateId = 'State is required';
+    if (!formData.postalCode.trim()) newErrors.postalCode = 'Postal code is required';
     if (!formData.businessNatureId || formData.businessNatureId === 0) (newErrors as any).businessNatureId = 'Business nature is required';
+    if (!formData.industryId || formData.industryId === 0) (newErrors as any).industryId = 'Industry is required';
     if (!formData.firstName.trim()) newErrors.firstName = 'First name is required';
     if (!formData.lastName.trim()) newErrors.lastName = 'Last name is required';
     if (!formData.email.trim()) newErrors.email = 'Email is required';
@@ -153,37 +205,44 @@ export default function SignupPage() {
     setIsLoading(true);
 
     try {
-      const response = await fetch('/api/tenants', {
+      // Get token from localStorage
+      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+      
+      const response = await fetch('http://localhost:3001/api/v1/sellers', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          ...(token && { 'Authorization': `Bearer ${token}` }),
         },
         body: JSON.stringify({
-          // Tenant data
-          name: formData.tenantName,
-          ntn: formData.ntn,
-          businessAddress: formData.businessAddress,
-          businessPhone: formData.businessPhone,
-          businessEmail: formData.businessEmail,
-          businessNatureId: formData.businessNatureId,
-          fbrSandboxClientId: formData.fbrSandboxClientId,
-          fbrProductionClientId: formData.fbrProductionClientId,
-          
-          // User data
-          adminUser: {
+          user: {
+            email: formData.email,
             firstName: formData.firstName,
             lastName: formData.lastName,
-            email: formData.email,
-            phone: formData.phone,
+            roleId: 2,
             password: formData.password,
+          },
+          seller: {
+            businessName: formData.sellerName,
+            ntnCnic: formData.ntn,
+            businessNatureId: formData.businessNatureId,
+            industryId: formData.industryId,
+            address1: formData.businessAddress1,
+            address2: formData.businessAddress2,
+            city: formData.city,
+            stateId: formData.stateId,
+            postalCode: formData.postalCode,
+            businessPhone: formData.businessPhone,
+            businessEmail: formData.businessEmail,
+            fbrSandBoxToken: formData.fbrSandboxClientId,
+            fbrProdToken: formData.fbrProductionClientId,
           },
         }),
       });
 
       if (response.ok) {
         const result = await response.json();
-        alert('Tenant registered successfully! You can now login.');
-        router.push('/login');
+        setShowSuccessModal(true);
       } else {
         const error = await response.json();
         alert(`Registration failed: ${error.message || 'Unknown error'}`);
@@ -206,7 +265,7 @@ export default function SignupPage() {
           Register Your Business
         </h2>
         <p className="mt-2 text-center text-sm text-gray-600">
-          Create your tenant account and start managing digital invoices
+          Create your seller account and start managing digital invoices
         </p>
       </div>
 
@@ -229,17 +288,32 @@ export default function SignupPage() {
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <Label htmlFor="tenantName">Business Name *</Label>
+                    <Label htmlFor="sellerName">Business Name *</Label>
                     <Input
-                      id="tenantName"
+                      id="sellerName"
                       type="text"
-                      value={formData.tenantName}
-                      onChange={(e) => handleInputChange('tenantName', e.target.value)}
+                      value={formData.sellerName}
+                      onChange={(e) => handleInputChange('sellerName', e.target.value)}
                       placeholder="Enter business name"
-                      className={errors.tenantName ? 'border-red-500' : ''}
+                      className={errors.sellerName ? 'border-red-500' : ''}
                     />
-                    {errors.tenantName && (
-                      <p className="text-red-500 text-sm mt-1">{errors.tenantName}</p>
+                    {errors.sellerName && (
+                      <p className="text-red-500 text-sm mt-1">{errors.sellerName}</p>
+                    )}
+                  </div>
+
+                  <div>
+                    <Label htmlFor="ntn">NTN (National Tax Number) *</Label>
+                    <Input
+                      id="ntn"
+                      type="text"
+                      value={formData.ntn}
+                      onChange={(e) => handleInputChange('ntn', e.target.value)}
+                      placeholder="1234567-8"
+                      className={errors.ntn ? 'border-red-500' : ''}
+                    />
+                    {errors.ntn && (
+                      <p className="text-red-500 text-sm mt-1">{errors.ntn}</p>
                     )}
                   </div>
 
@@ -267,20 +341,27 @@ export default function SignupPage() {
                   </div>
 
                   <div>
-                    <Label htmlFor="ntn">NTN (National Tax Number) *</Label>
-                    <Input
-                      id="ntn"
-                      type="text"
-                      value={formData.ntn}
-                      onChange={(e) => handleInputChange('ntn', e.target.value)}
-                      placeholder="1234567-8"
-                      className={errors.ntn ? 'border-red-500' : ''}
-                    />
-                    {errors.ntn && (
-                      <p className="text-red-500 text-sm mt-1">{errors.ntn}</p>
+                    <Label htmlFor="industry">Industry *</Label>
+                    <Select
+                      value={formData.industryId.toString()}
+                      onValueChange={(value) => handleInputChange('industryId', parseInt(value))}
+                      disabled={loadingIndustries}
+                    >
+                      <SelectTrigger className={errors.industryId ? 'border-red-500' : ''}>
+                        <SelectValue placeholder={loadingIndustries ? "Loading..." : "Select industry"} />
+                      </SelectTrigger>
+                      <SelectContent>
+                      {industries.map((industry) => (
+                        <SelectItem key={industry.id} value={industry.id.toString()}>
+                          {industry.industryName}
+                        </SelectItem>
+                      ))}
+                      </SelectContent>
+                    </Select>
+                    {errors.industryId && (
+                      <p className="text-red-500 text-sm mt-1">{errors.industryId}</p>
                     )}
                   </div>
-
 
                   <div>
                     <Label htmlFor="businessEmail">Business Email *</Label>
@@ -298,27 +379,102 @@ export default function SignupPage() {
                   </div>
 
                   <div>
-                    <Label htmlFor="businessPhone">Business Phone</Label>
+                    <Label htmlFor="businessPhone">Business Phone *</Label>
                     <Input
                       id="businessPhone"
                       type="tel"
                       value={formData.businessPhone}
                       onChange={(e) => handleInputChange('businessPhone', e.target.value)}
                       placeholder="+92-300-1234567"
+                      className={errors.businessPhone ? 'border-red-500' : ''}
                     />
+                    {errors.businessPhone && (
+                      <p className="text-red-500 text-sm mt-1">{errors.businessPhone}</p>
+                    )}
                   </div>
                 </div>
 
                 <div>
-                  <Label htmlFor="businessAddress">Business Address</Label>
+                  <Label htmlFor="businessAddress1">Address 1 *</Label>
                   <Input
-                    id="businessAddress"
+                    id="businessAddress1"
                     type="text"
-                    value={formData.businessAddress}
-                    onChange={(e) => handleInputChange('businessAddress', e.target.value)}
-                    placeholder="Enter complete business address"
+                    value={formData.businessAddress1}
+                    onChange={(e) => handleInputChange('businessAddress1', e.target.value)}
+                    placeholder="Street address, building number"
+                    className={errors.businessAddress1 ? 'border-red-500' : ''}
+                  />
+                  {errors.businessAddress1 && (
+                    <p className="text-red-500 text-sm mt-1">{errors.businessAddress1}</p>
+                  )}
+                </div>
+
+                <div>
+                  <Label htmlFor="businessAddress2">Address 2</Label>
+                  <Input
+                    id="businessAddress2"
+                    type="text"
+                    value={formData.businessAddress2}
+                    onChange={(e) => handleInputChange('businessAddress2', e.target.value)}
+                    placeholder="Apartment, suite, unit, etc. (optional)"
                   />
                 </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="city">City *</Label>
+                    <Input
+                      id="city"
+                      type="text"
+                      value={formData.city}
+                      onChange={(e) => handleInputChange('city', e.target.value)}
+                      placeholder="Enter city"
+                      className={errors.city ? 'border-red-500' : ''}
+                    />
+                    {errors.city && (
+                      <p className="text-red-500 text-sm mt-1">{errors.city}</p>
+                    )}
+                  </div>
+
+                  <div>
+                    <Label htmlFor="state">State *</Label>
+                    <Select
+                      value={formData.stateId.toString()}
+                      onValueChange={(value) => handleInputChange('stateId', parseInt(value))}
+                      disabled={loadingStates}
+                    >
+                      <SelectTrigger className={errors.stateId ? 'border-red-500' : ''}>
+                        <SelectValue placeholder={loadingStates ? "Loading..." : "Select state"} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {states.map((state) => (
+                          <SelectItem key={state.id} value={state.id.toString()}>
+                            {state.state}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {errors.stateId && (
+                      <p className="text-red-500 text-sm mt-1">{errors.stateId}</p>
+                    )}
+                  </div>
+                </div>
+
+                <div>
+                  <Label htmlFor="postalCode">Postal Code *</Label>
+                  <Input
+                    id="postalCode"
+                    type="text"
+                    value={formData.postalCode}
+                    onChange={(e) => handleInputChange('postalCode', e.target.value)}
+                    placeholder="Enter postal code"
+                    className={errors.postalCode ? 'border-red-500' : ''}
+                  />
+                  {errors.postalCode && (
+                    <p className="text-red-500 text-sm mt-1">{errors.postalCode}</p>
+                  )}
+                </div>
+
               </div>
 
               {/* User Information */}
@@ -493,6 +649,19 @@ export default function SignupPage() {
             </form>
           </CardContent>
         </Card>
+
+        {/* Success Modal */}
+        <SuccessModal
+          isOpen={showSuccessModal}
+          onClose={() => setShowSuccessModal(false)}
+          title="Seller Created Successfully!"
+          message="Your seller account has been created successfully. You can now login with your credentials."
+          buttonText="Go to Login"
+          onButtonClick={() => {
+            setShowSuccessModal(false);
+            router.push('/login');
+          }}
+        />
       </div>
     </div>
   );

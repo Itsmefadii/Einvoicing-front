@@ -1,7 +1,7 @@
 export interface DashboardData {
   stats: {
     totalInvoices: number;
-    totalTenants: number;
+    totalSellers: number;
     issuedInvoices: number;
     pendingInvoices: number;
     failedInvoices: number;
@@ -15,9 +15,9 @@ export interface DashboardData {
     invoices: number;
     revenue: number;
     fbrSuccess: number;
-    newTenants: number;
+    newSellers: number;
   }[];
-  topTenants: {
+  topSellers: {
     id: string;
     name: string;
     invoices: number;
@@ -27,12 +27,12 @@ export interface DashboardData {
   }[];
   recentActivity: {
     id: string;
-    type: 'invoice_created' | 'invoice_issued' | 'fbr_submission' | 'tenant_added' | 'system_alert';
+    type: 'invoice_created' | 'invoice_issued' | 'fbr_submission' | 'seller_added' | 'system_alert';
     message: string;
     timestamp: string;
     status: 'success' | 'warning' | 'error';
     userId?: string;
-    tenantId?: string;
+    sellerId?: string;
   }[];
   fbrStats: {
     totalSubmissions: number;
@@ -69,7 +69,7 @@ class DataService {
     return {
       stats: {
         totalInvoices: 1247,
-        totalTenants: 23,
+        totalSellers: 23,
         issuedInvoices: 892,
         pendingInvoices: 156,
         failedInvoices: 45,
@@ -79,14 +79,14 @@ class DataService {
         activeUsers: 18
       },
       monthlyTrends: [
-        { month: 'Jan', invoices: 120, revenue: 180000, fbrSuccess: 95, newTenants: 2 },
-        { month: 'Feb', invoices: 135, revenue: 202500, fbrSuccess: 92, newTenants: 3 },
-        { month: 'Mar', invoices: 110, revenue: 165000, fbrSuccess: 88, newTenants: 1 },
-        { month: 'Apr', invoices: 145, revenue: 217500, fbrSuccess: 96, newTenants: 4 },
-        { month: 'May', invoices: 160, revenue: 240000, fbrSuccess: 94, newTenants: 2 },
-        { month: 'Jun', invoices: 175, revenue: 262500, fbrSuccess: 97, newTenants: 3 }
+        { month: 'Jan', invoices: 120, revenue: 180000, fbrSuccess: 95, newSellers: 2 },
+        { month: 'Feb', invoices: 135, revenue: 202500, fbrSuccess: 92, newSellers: 3 },
+        { month: 'Mar', invoices: 110, revenue: 165000, fbrSuccess: 88, newSellers: 1 },
+        { month: 'Apr', invoices: 145, revenue: 217500, fbrSuccess: 96, newSellers: 4 },
+        { month: 'May', invoices: 160, revenue: 240000, fbrSuccess: 94, newSellers: 2 },
+        { month: 'Jun', invoices: 175, revenue: 262500, fbrSuccess: 97, newSellers: 3 }
       ],
-      topTenants: [
+      topSellers: [
         {
           id: '1',
           name: 'ABC Company',
@@ -136,7 +136,7 @@ class DataService {
           timestamp: '2 minutes ago',
           status: 'success',
           userId: 'user1',
-          tenantId: '1'
+          sellerId: '1'
         },
         {
           id: '2',
@@ -145,7 +145,7 @@ class DataService {
           timestamp: '15 minutes ago',
           status: 'success',
           userId: 'user2',
-          tenantId: '2'
+          sellerId: '2'
         },
         {
           id: '3',
@@ -154,12 +154,12 @@ class DataService {
           timestamp: '1 hour ago',
           status: 'success',
           userId: 'user1',
-          tenantId: '1'
+          sellerId: '1'
         },
         {
           id: '4',
-          type: 'tenant_added',
-          message: 'New tenant "XYZ Trading" added to the platform',
+          type: 'seller_added',
+          message: 'New seller "XYZ Trading" added to the platform',
           timestamp: '2 hours ago',
           status: 'success',
           userId: 'admin'
@@ -171,7 +171,7 @@ class DataService {
           timestamp: '3 hours ago',
           status: 'error',
           userId: 'user3',
-          tenantId: '3'
+          sellerId: '3'
         },
         {
           id: '6',
@@ -284,6 +284,91 @@ class DataService {
         { id: 6, businessnature: 'Service Provider' },
         { id: 7, businessnature: 'Manufacture' },
         { id: 8, businessnature: 'Other' }
+      ];
+    }
+  }
+
+  async getIndustries(): Promise<{ id: number; industryName: string }[]> {
+    try {
+      // Get token from localStorage
+      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+      
+      // Call your actual API endpoint
+      const response = await fetch('http://localhost:3001/api/v1/system-configs/industries', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token && { 'Authorization': `Bearer ${token}` }),
+        },
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        return data.data;
+      } else {
+        throw new Error(data.message || 'Failed to fetch industries');
+      }
+    } catch (error) {
+      console.error('Error fetching industries:', error);
+      console.log('Using fallback data for industries');
+      // Return fallback data in case of error
+      return [
+        { id: 1, industryName: 'Technology' },
+        { id: 2, industryName: 'Healthcare' },
+        { id: 3, industryName: 'Finance' },
+        { id: 4, industryName: 'Manufacturing' },
+        { id: 5, industryName: 'Retail' },
+        { id: 6, industryName: 'Education' },
+        { id: 7, industryName: 'Construction' },
+        { id: 8, industryName: 'Food & Beverage' },
+        { id: 9, industryName: 'Transportation' },
+        { id: 10, industryName: 'Other' }
+      ];
+    }
+  }
+
+  async getStates(): Promise<{ id: number; state: string; stateCode: number }[]> {
+    try {
+      // Get token from localStorage
+      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+      
+      // Call your actual API endpoint
+      const response = await fetch('http://localhost:3001/api/v1/system-configs/states', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token && { 'Authorization': `Bearer ${token}` }),
+        },
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        return data.data;
+      } else {
+        throw new Error(data.message || 'Failed to fetch states');
+      }
+    } catch (error) {
+      console.error('Error fetching states:', error);
+      console.log('Using fallback data for states');
+      // Return fallback data in case of error
+      return [
+        { id: 1, state: 'BALOCHISTAN', stateCode: 2 },
+        { id: 2, state: 'AZAD JAMMU AND KASHMIR', stateCode: 4 },
+        { id: 3, state: 'CAPITAL TERRITORY', stateCode: 5 },
+        { id: 4, state: 'KHYBER PAKHTUNKHWA', stateCode: 6 },
+        { id: 5, state: 'PUNJAB', stateCode: 7 },
+        { id: 6, state: 'SINDH', stateCode: 8 },
+        { id: 7, state: 'GILGIT BALTISTAN', stateCode: 9 }
       ];
     }
   }

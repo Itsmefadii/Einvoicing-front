@@ -27,7 +27,7 @@ interface Invoice {
   totalAmount: number;
   invoiceDate: string;
   dueDate?: string;
-  tenant: {
+  seller: {
     name: string;
   };
   fbrResponse?: {
@@ -60,7 +60,7 @@ export default function InvoicesPage() {
         totalAmount: 59000,
         invoiceDate: '2025-08-16',
         dueDate: '2025-09-16',
-        tenant: { name: 'Tech Solutions' },
+        seller: { name: 'Tech Solutions' },
         fbrResponse: {
           irn: 'FBR-IRN-123456789',
           qrCode: 'data:image/png;base64,...',
@@ -78,7 +78,7 @@ export default function InvoicesPage() {
         totalAmount: 88500,
         invoiceDate: '2025-08-15',
         dueDate: '2025-09-15',
-        tenant: { name: 'Tech Solutions' },
+        seller: { name: 'Tech Solutions' },
       },
       {
         id: '3',
@@ -90,7 +90,7 @@ export default function InvoicesPage() {
         taxAmount: 5400,
         totalAmount: 35400,
         invoiceDate: '2025-08-14',
-        tenant: { name: 'Tech Solutions' },
+        seller: { name: 'Tech Solutions' },
         fbrResponse: {
           statusCode: 400,
         },
@@ -105,7 +105,7 @@ export default function InvoicesPage() {
         taxAmount: 8100,
         totalAmount: 53100,
         invoiceDate: '2025-08-13',
-        tenant: { name: 'Tech Solutions' },
+        seller: { name: 'Tech Solutions' },
       },
       {
         id: '5',
@@ -118,7 +118,7 @@ export default function InvoicesPage() {
         totalAmount: 70800,
         invoiceDate: '2025-08-12',
         dueDate: '2025-09-12',
-        tenant: { name: 'Tech Solutions' },
+        seller: { name: 'Tech Solutions' },
         fbrResponse: {
           irn: 'FBR-IRN-987654321',
           qrCode: 'data:image/png;base64,...',
@@ -210,7 +210,7 @@ export default function InvoicesPage() {
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Invoices</h1>
           <p className="mt-2 text-sm text-gray-700">
-            Manage and track all your invoices across all tenants.
+            Manage and track all your invoices across all sellers.
           </p>
         </div>
         <div className="mt-4 sm:mt-0 space-x-3">
@@ -294,7 +294,7 @@ export default function InvoicesPage() {
                   Date
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Tenant
+                  Seller
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   FBR Status
@@ -334,7 +334,7 @@ export default function InvoicesPage() {
                     {formatDate(invoice.invoiceDate)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {invoice.tenant.name}
+                    {invoice.seller.name}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     {invoice.fbrResponse?.irn ? (

@@ -16,7 +16,7 @@ interface BusinessNature {
   businessnature: string;
 }
 
-interface Tenant {
+interface Seller {
   id: string;
   name: string;
   ntn: string;
@@ -45,13 +45,13 @@ interface Tenant {
 }
 
 
-export default function TenantsPage() {
-  const [tenants, setTenants] = useState<Tenant[]>([]);
+export default function SellersPage() {
+  const [sellers, setSellers] = useState<Seller[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   // Mock data - replace with actual API call
   useEffect(() => {
-    const mockTenants: Tenant[] = [
+    const mockSellers: Seller[] = [
           {
             id: '1',
             name: 'Tech Solutions',
@@ -149,7 +149,7 @@ export default function TenantsPage() {
           },
     ];
 
-    setTenants(mockTenants);
+    setSellers(mockSellers);
     setIsLoading(false);
   }, []);
 
@@ -188,9 +188,9 @@ export default function TenantsPage() {
       {/* Page header */}
       <div className="sm:flex sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Tenants</h1>
+          <h1 className="text-2xl font-bold text-gray-900">Sellers</h1>
           <p className="mt-2 text-sm text-gray-700">
-            Manage tenant accounts and their FBR integration settings.
+            Manage seller accounts and their FBR integration settings.
           </p>
         </div>
         <div className="mt-4 sm:mt-0">
@@ -199,7 +199,7 @@ export default function TenantsPage() {
             className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
           >
             <PlusIcon className="h-4 w-4 mr-2" />
-            Add Tenant
+            Add Seller
           </Link>
         </div>
       </div>
@@ -214,8 +214,8 @@ export default function TenantsPage() {
               </div>
               <div className="ml-5 w-0 flex-1">
                 <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">Total Tenants</dt>
-                  <dd className="text-lg font-medium text-gray-900">{tenants.length}</dd>
+                  <dt className="text-sm font-medium text-gray-500 truncate">Total Sellers</dt>
+                  <dd className="text-lg font-medium text-gray-900">{sellers.length}</dd>
                 </dl>
               </div>
             </div>
@@ -230,9 +230,9 @@ export default function TenantsPage() {
               </div>
               <div className="ml-5 w-0 flex-1">
                 <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">Active Tenants</dt>
+                  <dt className="text-sm font-medium text-gray-500 truncate">Active Sellers</dt>
                   <dd className="text-lg font-medium text-gray-900">
-                    {tenants.filter(t => t.isActive).length}
+                    {sellers.filter(s => s.isActive).length}
                   </dd>
                 </dl>
               </div>
@@ -250,7 +250,7 @@ export default function TenantsPage() {
                 <dl>
                   <dt className="text-sm font-medium text-gray-500 truncate">Production</dt>
                   <dd className="text-lg font-medium text-gray-900">
-                    {tenants.filter(t => t.environment === 'production').length}
+                    {sellers.filter(s => s.environment === 'production').length}
                   </dd>
                 </dl>
               </div>
@@ -268,7 +268,7 @@ export default function TenantsPage() {
                 <dl>
                   <dt className="text-sm font-medium text-gray-500 truncate">Total Users</dt>
                   <dd className="text-lg font-medium text-gray-900">
-                    {tenants.reduce((total, tenant) => total + tenant._count.users, 0)}
+                    {sellers.reduce((total, seller) => total + seller._count.users, 0)}
                   </dd>
                 </dl>
               </div>
@@ -277,16 +277,16 @@ export default function TenantsPage() {
         </div>
       </div>
 
-      {/* Tenants table */}
+      {/* Sellers table */}
       <div className="bg-white shadow rounded-lg overflow-hidden">
         <div className="px-4 py-5 sm:p-6">
-          <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">Tenant List</h3>
+          <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">Seller List</h3>
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Tenant
+                    Seller
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Business Nature
@@ -315,8 +315,8 @@ export default function TenantsPage() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {tenants.map((tenant) => (
-                  <tr key={tenant.id} className="hover:bg-gray-50">
+                {sellers.map((seller) => (
+                  <tr key={seller.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
                         <div className="flex-shrink-0 h-10 w-10">
@@ -325,72 +325,72 @@ export default function TenantsPage() {
                           </div>
                         </div>
                         <div className="ml-4">
-                          <div className="text-sm font-medium text-gray-900">{tenant.name}</div>
-                          <div className="text-sm text-gray-500">{tenant.businessEmail}</div>
-                          <div className="text-sm text-gray-500">ID: {tenant.id}</div>
+                          <div className="text-sm font-medium text-gray-900">{seller.name}</div>
+                          <div className="text-sm text-gray-500">{seller.businessEmail}</div>
+                          <div className="text-sm text-gray-500">ID: {seller.id}</div>
                         </div>
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getCategoryColor(tenant.businessNature || 'Other')}`}>
-                        {tenant.businessNature || 'Unknown'}
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getCategoryColor(seller.businessNature || 'Other')}`}>
+                        {seller.businessNature || 'Unknown'}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {tenant.ntn}
+                        {seller.ntn}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        tenant.environment === 'production' 
+                        seller.environment === 'production' 
                           ? 'bg-green-100 text-green-800' 
                           : 'bg-yellow-100 text-yellow-800'
                       }`}>
-                        {tenant.environment === 'production' ? 'Production' : 'Sandbox'}
+                        {seller.environment === 'production' ? 'Production' : 'Sandbox'}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        tenant.isActive 
+                        seller.isActive 
                           ? 'bg-green-100 text-green-800' 
                           : 'bg-red-100 text-red-800'
                       }`}>
-                        {tenant.isActive ? 'Active' : 'Inactive'}
+                        {seller.isActive ? 'Active' : 'Inactive'}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       <div className="flex items-center">
                         <UserGroupIcon className="h-4 w-4 mr-1 text-gray-400" />
-                        {tenant._count.users}
+                        {seller._count.users}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {tenant._count.invoices.toLocaleString()}
+                      {seller._count.invoices.toLocaleString()}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {formatDate(tenant.createdAt)}
+                      {formatDate(seller.createdAt)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <div className="flex items-center justify-end space-x-2">
                         <Link
-                          href={`/dashboard/tenants/${tenant.id}`}
+                          href={`/dashboard/sellers/${seller.id}`}
                           className="text-blue-600 hover:text-blue-900"
                         >
                           View
                         </Link>
                         <Link
-                          href={`/dashboard/tenants/${tenant.id}/users`}
+                          href={`/dashboard/sellers/${seller.id}/users`}
                           className="text-green-600 hover:text-green-900"
                         >
                           Users
                         </Link>
                         <Link
-                          href={`/dashboard/tenants/${tenant.id}/edit`}
+                          href={`/dashboard/sellers/${seller.id}/edit`}
                           className="text-purple-600 hover:text-purple-900"
                         >
                           Edit
                         </Link>
                         <Link
-                          href={`/dashboard/tenants/${tenant.id}/fbr`}
+                          href={`/dashboard/sellers/${seller.id}/fbr`}
                           className="text-orange-600 hover:text-orange-900"
                         >
                           FBR
