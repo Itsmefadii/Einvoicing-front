@@ -1,13 +1,16 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/lib/auth-context';
 import { 
   PlusIcon, 
   TrashIcon,
   CalculatorIcon,
   DocumentTextIcon,
   UserIcon,
-  CurrencyDollarIcon
+  CurrencyDollarIcon,
+  ExclamationTriangleIcon
 } from '@heroicons/react/24/outline';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/app/components/ui/card';
 import { Button } from '@/app/components/ui/button';
@@ -38,6 +41,22 @@ interface InvoiceForm {
 }
 
 export default function CreateInvoicePage() {
+  const { user, isLoading: authLoading } = useAuth();
+  const router = useRouter();
+  const [isCheckingPermissions, setIsCheckingPermissions] = useState(true);
+
+  // Check permissions on component mount
+  useEffect(() => {
+    if (!authLoading && user) {
+      // Admin users (roleId === 1) cannot create invoices
+      if (user.roleId === 1) {
+        router.push('/dashboard/invoices?error=access_denied');
+        return;
+      }
+      setIsCheckingPermissions(false);
+    }
+  }, [user, authLoading, router]);
+
   const [form, setForm] = useState<InvoiceForm>({
     invoiceNumber: '',
     invoiceDate: new Date().toISOString().split('T')[0],
@@ -126,6 +145,31 @@ export default function CreateInvoicePage() {
   };
 
   const { subtotal, taxAmount, total } = calculateTotals();
+
+  // Show loading while checking permissions
+  if (authLoading || isCheckingPermissions) {
+    return (
+      <div className="flex items-center justify-center min-h-96">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
+  // Show access denied if user is not authorized
+  if (!user || user.roleId === 1) {
+    return (
+      <div className="flex items-center justify-center min-h-96">
+        <div className="text-center">
+          <ExclamationTriangleIcon className="h-16 w-16 text-red-500 mx-auto mb-4" />
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Access Denied</h2>
+          <p className="text-gray-600 mb-4">You don't have permission to create invoices.</p>
+          <Button onClick={() => router.push('/dashboard/invoices')}>
+            Back to Invoices
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

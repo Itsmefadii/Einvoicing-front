@@ -1,6 +1,8 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/lib/auth-context';
 import { 
   CloudArrowUpIcon, 
   DocumentArrowDownIcon,
@@ -23,11 +25,26 @@ interface UploadedFile {
 }
 
 export default function UploadInvoicePage() {
+  const { user, isLoading: authLoading } = useAuth();
+  const router = useRouter();
+  const [isCheckingPermissions, setIsCheckingPermissions] = useState(true);
   const [files, setFiles] = useState<UploadedFile[]>([]);
   const [isDragOver, setIsDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+  // Check permissions on component mount
+  useEffect(() => {
+    if (!authLoading && user) {
+      // Admin users (roleId === 1) cannot upload invoices
+      if (user.roleId === 1) {
+        router.push('/dashboard/invoices?error=access_denied');
+        return;
+      }
+      setIsCheckingPermissions(false);
+    }
+  }, [user, authLoading, router]);
+
+  const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFiles = event.target.files;
     if (selectedFiles) {
       const newFiles: UploadedFile[] = Array.from(selectedFiles).map(file => ({
@@ -41,8 +58,8 @@ export default function UploadInvoicePage() {
       
       setFiles(prev => [...prev, ...newFiles]);
       
-      // Simulate file processing
-      newFiles.forEach(file => simulateFileProcessing(file.id));
+      // Process each file immediately with real API call
+      newFiles.forEach(file => processFileWithAPI(file.id, selectedFiles[0]));
     }
   };
 
@@ -56,7 +73,7 @@ export default function UploadInvoicePage() {
     setIsDragOver(false);
   };
 
-  const handleDrop = (e: React.DragEvent) => {
+  const handleDrop = async (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragOver(false);
     
@@ -73,8 +90,8 @@ export default function UploadInvoicePage() {
       
       setFiles(prev => [...prev, ...newFiles]);
       
-      // Simulate file processing
-      newFiles.forEach(file => simulateFileProcessing(file.id));
+      // Process each file immediately with real API call
+      newFiles.forEach(file => processFileWithAPI(file.id, droppedFiles[0]));
     }
   };
 
@@ -97,31 +114,76 @@ export default function UploadInvoicePage() {
     return null;
   };
 
-  const simulateFileProcessing = async (fileId: string) => {
-    // Simulate upload progress
-    for (let i = 0; i <= 100; i += 10) {
-      await new Promise(resolve => setTimeout(resolve, 200));
-      setFiles(prev => prev.map(file => 
-        file.id === fileId 
-          ? { ...file, progress: i, status: i < 100 ? 'uploading' : 'processing' }
-          : file
+  const processFileWithAPI = async (fileId: string, file: File) => {
+    try {
+      // Validate file first
+      const validationError = validateFile(file);
+      if (validationError) {
+        setFiles(prev => prev.map(f => 
+          f.id === fileId 
+            ? { ...f, status: 'error', error: validationError }
+            : f
+        ));
+        return;
+      }
+
+      // Get authorization token
+      const token = localStorage.getItem('authToken') || localStorage.getItem('token');
+      if (!token) {
+        setFiles(prev => prev.map(f => 
+          f.id === fileId 
+            ? { ...f, status: 'error', error: 'No authorization token found' }
+            : f
+        ));
+        return;
+      }
+
+      // Update status to processing
+      setFiles(prev => prev.map(f => 
+        f.id === fileId 
+          ? { ...f, status: 'processing', progress: 50 }
+          : f
+      ));
+
+      // Prepare form data
+      const formData = new FormData();
+      formData.append('file', file);
+
+      // Call the API
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
+      const response = await fetch(`${apiUrl}/invoice/upload-excel`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+        body: formData,
+      });
+
+      const data = await response.json();
+
+      // Update status based on response
+      if (response.ok && data.success) {
+        setFiles(prev => prev.map(f => 
+          f.id === fileId 
+            ? { ...f, status: 'completed', progress: 100 }
+            : f
+        ));
+      } else {
+        const errorMessage = data.message || data.error || 'Upload failed';
+        setFiles(prev => prev.map(f => 
+          f.id === fileId 
+            ? { ...f, status: 'error', error: errorMessage }
+            : f
+        ));
+      }
+    } catch (error) {
+      console.error('Error processing file:', error);
+      setFiles(prev => prev.map(f => 
+        f.id === fileId 
+          ? { ...f, status: 'error', error: 'Network error occurred' }
+          : f
       ));
     }
-
-    // Simulate processing
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    // Randomly set final status
-    const isSuccess = Math.random() > 0.2; // 80% success rate
-    setFiles(prev => prev.map(file => 
-      file.id === fileId 
-        ? { 
-            ...file, 
-            status: isSuccess ? 'completed' : 'error',
-            error: isSuccess ? undefined : 'Failed to process file'
-          }
-        : file
-    ));
   };
 
   const removeFile = (fileId: string) => {
@@ -142,18 +204,7 @@ INV-2024-002,2024-06-16,XYZ Corporation,2345678,2345678901234,Consulting Service
     window.URL.revokeObjectURL(url);
   };
 
-  const startBulkUpload = async () => {
-    const pendingFiles = files.filter(file => file.status === 'completed');
-    if (pendingFiles.length === 0) {
-      alert('No completed files to upload');
-      return;
-    }
-
-    console.log('Starting bulk upload for:', pendingFiles.length, 'files');
-    // Simulate bulk upload
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    console.log('Bulk upload completed');
-  };
+  // Removed startBulkUpload function as requested
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -193,6 +244,31 @@ INV-2024-002,2024-06-16,XYZ Corporation,2345678,2345678901234,Consulting Service
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
+  // Show loading while checking permissions
+  if (authLoading || isCheckingPermissions) {
+    return (
+      <div className="flex items-center justify-center min-h-96">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
+  // Show access denied if user is not authorized
+  if (!user || user.roleId === 1) {
+    return (
+      <div className="flex items-center justify-center min-h-96">
+        <div className="text-center">
+          <ExclamationTriangleIcon className="h-16 w-16 text-red-500 mx-auto mb-4" />
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Access Denied</h2>
+          <p className="text-gray-600 mb-4">You don't have permission to upload invoices.</p>
+          <Button onClick={() => router.push('/dashboard/invoices')}>
+            Back to Invoices
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Page Header */}
@@ -205,9 +281,6 @@ INV-2024-002,2024-06-16,XYZ Corporation,2345678,2345678901234,Consulting Service
           <Button variant="outline" onClick={downloadTemplate}>
             <DocumentArrowDownIcon className="h-4 w-4 mr-2" />
             Download Template
-          </Button>
-          <Button onClick={startBulkUpload} disabled={files.filter(f => f.status === 'completed').length === 0}>
-            Start Bulk Upload
           </Button>
         </div>
       </div>

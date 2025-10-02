@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useAuth } from '@/lib/auth-context';
 import { 
   PlusIcon, 
   MagnifyingGlassIcon, 
@@ -16,28 +17,49 @@ import {
   ArrowUpTrayIcon
 } from '@heroicons/react/24/outline';
 
+interface InvoiceItem {
+  id: number;
+  hsCode: string;
+  productDescription: string;
+  rate: string;
+  uoM: string;
+  quantity: string;
+  totalValues: string;
+  valueSalesExcludingST: string;
+  fixedNotifiedValueOrRetailPrice: string;
+  salesTaxApplicable: boolean;
+  salesTaxWithheldAtSource: string;
+  extraTax: string;
+  furtherTax: string;
+  sroScheduleNo: number;
+  fedPayable: string;
+  discount: string;
+  saleType: string;
+  sroItemSerialNo: string;
+}
+
 interface Invoice {
-  id: string;
-  invoiceNo: string;
-  customerName: string;
-  customerNtn?: string;
-  status: 'draft' | 'pending' | 'processing' | 'issued' | 'failed' | 'cancelled';
-  amount: number;
-  taxAmount: number;
-  totalAmount: number;
+  id: number;
+  sellerId: number;
+  invoiceType: string;
   invoiceDate: string;
-  dueDate?: string;
-  seller: {
-    name: string;
-  };
-  fbrResponse?: {
-    irn?: string;
-    qrCode?: string;
-    statusCode: number;
-  };
+  buyerNTNCNIC: string;
+  buyerBusinessName: string;
+  buyerProvince: string;
+  buyerAddress: string;
+  buyerRegistrationType: string;
+  invoiceRefNo: string;
+  scenarioId: number;
+  totalAmount: string;
+  status: 'pending' | 'valid' | 'invalid' | 'submitted';
+  fbrInvoiceNumber?: string;
+  createdAt: string;
+  updatedAt: string;
+  items: InvoiceItem[];
 }
 
 export default function InvoicesPage() {
+  const { user, isLoading: authLoading } = useAuth();
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [filteredInvoices, setFilteredInvoices] = useState<Invoice[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -45,91 +67,68 @@ export default function InvoicesPage() {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
+  const [isUploading, setIsUploading] = useState(false);
 
-  // Mock data - replace with actual API call
+  console.log('InvoicesPage rendered - User:', user, 'AuthLoading:', authLoading);
+
+  // Fetch invoices from API
   useEffect(() => {
-    const mockInvoices: Invoice[] = [
-      {
-        id: '1',
-        invoiceNo: 'INV-2025-0012',
-        customerName: 'ABC Company Ltd',
-        customerNtn: '1234567-8',
-        status: 'issued',
-        amount: 50000,
-        taxAmount: 9000,
-        totalAmount: 59000,
-        invoiceDate: '2025-08-16',
-        dueDate: '2025-09-16',
-        seller: { name: 'Tech Solutions' },
-        fbrResponse: {
-          irn: 'FBR-IRN-123456789',
-          qrCode: 'data:image/png;base64,...',
-          statusCode: 200,
-        },
-      },
-      {
-        id: '2',
-        invoiceNo: 'INV-2025-0011',
-        customerName: 'XYZ Trading',
-        customerNtn: '8765432-1',
-        status: 'pending',
-        amount: 75000,
-        taxAmount: 13500,
-        totalAmount: 88500,
-        invoiceDate: '2025-08-15',
-        dueDate: '2025-09-15',
-        seller: { name: 'Tech Solutions' },
-      },
-      {
-        id: '3',
-        invoiceNo: 'INV-2025-0010',
-        customerName: 'DEF Industries',
-        customerNtn: '1122334-5',
-        status: 'failed',
-        amount: 30000,
-        taxAmount: 5400,
-        totalAmount: 35400,
-        invoiceDate: '2025-08-14',
-        seller: { name: 'Tech Solutions' },
-        fbrResponse: {
-          statusCode: 400,
-        },
-      },
-      {
-        id: '4',
-        invoiceNo: 'INV-2025-0009',
-        customerName: 'GHI Corporation',
-        customerNtn: '5566778-9',
-        status: 'draft',
-        amount: 45000,
-        taxAmount: 8100,
-        totalAmount: 53100,
-        invoiceDate: '2025-08-13',
-        seller: { name: 'Tech Solutions' },
-      },
-      {
-        id: '5',
-        invoiceNo: 'INV-2025-0008',
-        customerName: 'JKL Enterprises',
-        customerNtn: '9988776-5',
-        status: 'issued',
-        amount: 60000,
-        taxAmount: 10800,
-        totalAmount: 70800,
-        invoiceDate: '2025-08-12',
-        dueDate: '2025-09-12',
-        seller: { name: 'Tech Solutions' },
-        fbrResponse: {
-          irn: 'FBR-IRN-987654321',
-          qrCode: 'data:image/png;base64,...',
-          statusCode: 200,
-        },
-      },
-    ];
+    const fetchInvoices = async () => {
+      try {
+        setIsLoading(true);
+        
+        // Get authorization token from localStorage
+        const token = localStorage.getItem('authToken') || localStorage.getItem('token');
+        
+        if (!token) {
+          console.error('No authorization token found in localStorage');
+          setInvoices([]);
+          setFilteredInvoices([]);
+          setIsLoading(false);
+          return;
+        }
+        
+        // Try to fetch from your actual API first
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
+        const response = await fetch(`${apiUrl}/invoice`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success && data.data) {
+            setInvoices(data.data);
+            setFilteredInvoices(data.data);
+          } else {
+            console.error('API returned unsuccessful response:', data);
+            setInvoices([]);
+            setFilteredInvoices([]);
+          }
+        } else if (response.status === 401) {
+          console.error('Unauthorized: Invalid or expired token');
+          // Could redirect to login or show error message
+          setInvoices([]);
+          setFilteredInvoices([]);
+        } else {
+          console.error('Failed to fetch invoices:', response.status, response.statusText);
+          setInvoices([]);
+          setFilteredInvoices([]);
+        }
+      } catch (error) {
+        console.error('Error fetching invoices:', error);
+        // Fallback to empty array if API fails
+        setInvoices([]);
+        setFilteredInvoices([]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
-    setInvoices(mockInvoices);
-    setFilteredInvoices(mockInvoices);
-    setIsLoading(false);
+    fetchInvoices();
   }, []);
 
   // Filter invoices based on search and status
@@ -138,9 +137,9 @@ export default function InvoicesPage() {
 
     if (searchTerm) {
       filtered = filtered.filter(invoice =>
-        invoice.invoiceNo.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        invoice.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        invoice.customerNtn?.includes(searchTerm)
+        invoice.invoiceRefNo.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        invoice.buyerBusinessName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        invoice.buyerNTNCNIC?.includes(searchTerm)
       );
     }
 
@@ -154,15 +153,13 @@ export default function InvoicesPage() {
 
   const getStatusBadge = (status: string) => {
     const statusConfig = {
-      draft: { color: 'bg-gray-100 text-gray-800', icon: DocumentTextIcon },
       pending: { color: 'bg-yellow-100 text-yellow-800', icon: ClockIcon },
-      processing: { color: 'bg-blue-100 text-blue-800', icon: ClockIcon },
-      issued: { color: 'bg-green-100 text-green-800', icon: CheckCircleIcon },
-      failed: { color: 'bg-red-100 text-red-800', icon: ExclamationTriangleIcon },
-      cancelled: { color: 'bg-gray-100 text-gray-800', icon: DocumentTextIcon },
+      valid: { color: 'bg-green-100 text-green-800', icon: CheckCircleIcon },
+      invalid: { color: 'bg-red-100 text-red-800', icon: ExclamationTriangleIcon },
+      submitted: { color: 'bg-blue-100 text-blue-800', icon: DocumentTextIcon },
     };
 
-    const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.draft;
+    const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.pending;
     const Icon = config.icon;
 
     return (
@@ -173,12 +170,13 @@ export default function InvoicesPage() {
     );
   };
 
-  const formatCurrency = (amount: number) => {
+  const formatCurrency = (amount: string) => {
+    const numAmount = parseFloat(amount);
     return new Intl.NumberFormat('en-PK', {
       style: 'currency',
       currency: 'PKR',
-      minimumFractionDigits: 0,
-    }).format(amount);
+      minimumFractionDigits: 2,
+    }).format(numAmount);
   };
 
   const formatDate = (dateString: string) => {
@@ -189,13 +187,92 @@ export default function InvoicesPage() {
     });
   };
 
+  // Check if user can create/upload invoices (not admin)
+  const canCreateInvoice = user?.roleId !== 1; // Admin has roleId 1
+  const canUploadInvoice = user?.roleId !== 1; // Admin has roleId 1
+  
+  console.log('User role:', user?.roleId, 'Can upload:', canUploadInvoice, 'Can create:', canCreateInvoice);
+
+  // Handle Excel file upload
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    console.log('File upload triggered!', event.target.files);
+    alert('File upload function called!'); // Temporary alert to confirm function is called
+    
+    const file = event.target.files?.[0];
+    if (!file) {
+      console.log('No file selected');
+      alert('No file selected');
+      return;
+    }
+
+    console.log('Selected file:', file.name, file.type, file.size);
+    alert(`File selected: ${file.name}`);
+
+    if (!file.name.endsWith('.xlsx') && !file.name.endsWith('.xls')) {
+      alert('Please upload a valid Excel file (.xlsx or .xls)');
+      return;
+    }
+
+    try {
+      console.log('Starting upload process...');
+      setIsUploading(true);
+      
+      // Get authorization token from localStorage
+      const token = localStorage.getItem('authToken') || localStorage.getItem('token');
+      console.log('Token found:', !!token);
+      
+      if (!token) {
+        alert('No authorization token found. Please login again.');
+        setIsUploading(false);
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append('file', file);
+      console.log('FormData prepared');
+
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
+      console.log('Calling API:', `${apiUrl}/invoice/upload-excel`);
+      
+      const response = await fetch(`${apiUrl}/invoice/upload-excel`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+        body: formData,
+      });
+
+      console.log('API response status:', response.status);
+      const data = await response.json();
+      console.log('API response data:', data);
+
+      if (response.ok && data.success) {
+        // Success - show success message and refresh
+        alert('Excel file uploaded successfully!');
+        // Refresh the invoice list
+        window.location.reload();
+      } else {
+        // Failure - show error message with reason
+        const errorMessage = data.message || data.error || 'Upload failed';
+        alert(`Upload failed: ${errorMessage}`);
+      }
+    } catch (error) {
+      console.error('Error uploading file:', error);
+      alert('Error uploading file. Please try again.');
+    } finally {
+      setIsUploading(false);
+      // Reset the file input
+      event.target.value = '';
+    }
+  };
+
   // Pagination
   const totalPages = Math.ceil(filteredInvoices.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
   const currentInvoices = filteredInvoices.slice(startIndex, endIndex);
 
-  if (isLoading) {
+  if (isLoading || authLoading) {
     return (
       <div className="flex items-center justify-center min-h-96">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
@@ -213,22 +290,44 @@ export default function InvoicesPage() {
             Manage and track all your invoices across all sellers.
           </p>
         </div>
-        <div className="mt-4 sm:mt-0 space-x-3">
-          <Link
-            href="/dashboard/invoices/upload"
-            className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-          >
-            <ArrowUpTrayIcon className="h-4 w-4 mr-2" />
-            Upload Excel
-          </Link>
-          <Link
-            href="/dashboard/invoices/create"
-            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-          >
-            <PlusIcon className="h-4 w-4 mr-2" />
-            Create Invoice
-          </Link>
-        </div>
+        {canCreateInvoice || canUploadInvoice ? (
+          <div className="mt-4 sm:mt-0 space-x-3">
+            {canUploadInvoice && (
+              <div className="inline-block">
+                <input
+                  type="file"
+                  accept=".xlsx,.xls"
+                  onChange={(e) => {
+                    console.log('File input onChange triggered!', e.target.files);
+                    handleFileUpload(e);
+                  }}
+                  disabled={isUploading}
+                  className="hidden"
+                  id="excel-upload"
+                />
+                <label
+                  htmlFor="excel-upload"
+                  className={`inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 cursor-pointer ${
+                    isUploading ? 'opacity-50 cursor-not-allowed' : ''
+                  }`}
+                  onClick={() => console.log('Upload button clicked')}
+                >
+                  <ArrowUpTrayIcon className="h-4 w-4 mr-2" />
+                  {isUploading ? 'Uploading...' : 'Upload Excel'}
+                </label>
+              </div>
+            )}
+            {canCreateInvoice && (
+              <Link
+                href="/dashboard/invoices/create"
+                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              >
+                <PlusIcon className="h-4 w-4 mr-2" />
+                Create Invoice
+              </Link>
+            )}
+          </div>
+        ) : null}
       </div>
 
       {/* Filters and search */}
@@ -256,12 +355,10 @@ export default function InvoicesPage() {
               className="block w-full px-3 py-2 border border-gray-300 rounded-md leading-5 bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
             >
               <option value="all">All Statuses</option>
-              <option value="draft">Draft</option>
               <option value="pending">Pending</option>
-              <option value="processing">Processing</option>
-              <option value="issued">Issued</option>
-              <option value="failed">Failed</option>
-              <option value="cancelled">Cancelled</option>
+              <option value="valid">Valid</option>
+              <option value="invalid">Invalid</option>
+              <option value="submitted">Submitted</option>
             </select>
           </div>
 
@@ -282,7 +379,7 @@ export default function InvoicesPage() {
                   Invoice
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Customer
+                  Buyer
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Status
@@ -294,10 +391,10 @@ export default function InvoicesPage() {
                   Date
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Seller
+                  FBR Invoice #
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  FBR Status
+                  Registration
                 </th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Actions
@@ -308,18 +405,13 @@ export default function InvoicesPage() {
               {currentInvoices.map((invoice) => (
                 <tr key={invoice.id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900">{invoice.invoiceNo}</div>
-                    {invoice.dueDate && (
-                      <div className="text-sm text-gray-500">
-                        Due: {formatDate(invoice.dueDate)}
-                      </div>
-                    )}
+                    <div className="text-sm font-medium text-gray-900">{invoice.invoiceRefNo}</div>
+                    <div className="text-sm text-gray-500">{invoice.invoiceType}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">{invoice.customerName}</div>
-                    {invoice.customerNtn && (
-                      <div className="text-sm text-gray-500">NTN: {invoice.customerNtn}</div>
-                    )}
+                    <div className="text-sm text-gray-900">{invoice.buyerBusinessName}</div>
+                    <div className="text-sm text-gray-500">NTN: {invoice.buyerNTNCNIC}</div>
+                    <div className="text-sm text-gray-500">{invoice.buyerProvince}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     {getStatusBadge(invoice.status)}
@@ -327,26 +419,21 @@ export default function InvoicesPage() {
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm text-gray-900">{formatCurrency(invoice.totalAmount)}</div>
                     <div className="text-sm text-gray-500">
-                      Tax: {formatCurrency(invoice.taxAmount)}
+                      Items: {invoice.items.length}
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     {formatDate(invoice.invoiceDate)}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {invoice.seller.name}
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-sm text-gray-900">
+                      {invoice.fbrInvoiceNumber || '-'}
+                    </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    {invoice.fbrResponse?.irn ? (
-                      <div className="text-sm text-green-600">
-                        <div>IRN: {invoice.fbrResponse.irn}</div>
-                        <div className="text-xs text-gray-500">Success</div>
-                      </div>
-                    ) : invoice.status === 'failed' ? (
-                      <div className="text-sm text-red-600">Failed</div>
-                    ) : (
-                      <div className="text-sm text-gray-500">-</div>
-                    )}
+                    <div className="text-sm text-gray-500">
+                      {invoice.buyerRegistrationType}
+                    </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <div className="flex items-center justify-end space-x-2">
