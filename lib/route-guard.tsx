@@ -32,9 +32,15 @@ export function RouteGuard({ children }: { children: React.ReactNode }) {
     const requiredPermission = ROUTE_PERMISSIONS[pathname];
     
     if (requiredPermission) {
-      const hasPermission = user.permissions?.some(
+      // Check if user has the required permission
+      let hasPermission = user.permissions?.some(
         permission => permission.key === requiredPermission && permission.isRender
       );
+
+      // If user is admin or has super admin role, allow access to all routes
+      if (!hasPermission && (user.roleName?.toLowerCase() === 'admin' || user.roleName?.toLowerCase() === 'superadmin')) {
+        hasPermission = true;
+      }
 
       if (!hasPermission) {
         // Redirect to dashboard with error message

@@ -10,148 +10,105 @@ import {
   UserGroupIcon,
   EyeIcon
 } from '@heroicons/react/24/outline';
+import { useAuth } from '@/lib/auth-context';
 
 interface BusinessNature {
-  id: number;
   businessnature: string;
 }
 
+interface Industry {
+  industryName: string;
+}
+
+interface State {
+  state: string;
+}
+
+interface SellerUser {
+  id: number;
+  email: string;
+  firstName: string;
+  lastName: string;
+  isActive: number;
+}
+
 interface Seller {
-  id: string;
-  name: string;
-  ntn: string;
-  strn?: string;
-  businessAddress?: string;
-  businessPhone?: string;
-  businessEmail?: string;
+  id: number;
+  sellerCode: string;
+  businessName: string;
+  ntnCnic: string;
   businessNatureId: number;
-  businessNature?: string;
-  environment: 'sandbox' | 'production';
+  industryId: number;
+  address1: string;
+  address2: string;
+  city: string;
+  stateId: number;
+  postalCode: string;
+  businessPhone: string;
+  businessEmail: string;
+  fbrSandBoxToken: string;
+  fbrProdToken: string;
+  logoUrl: string | null;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
-  users: {
-    id: string;
-    email: string;
-    firstName: string;
-    lastName: string;
-    role: string;
-    isActive: boolean;
-  }[];
-  _count: {
-    invoices: number;
-    users: number;
-  };
+  users: SellerUser[];
+  businessNature: BusinessNature;
+  industry: Industry;
+  state: State;
 }
 
 
 export default function SellersPage() {
   const [sellers, setSellers] = useState<Seller[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const { user } = useAuth();
 
-  // Mock data - replace with actual API call
+  // Fetch sellers data from API
   useEffect(() => {
-    const mockSellers: Seller[] = [
-          {
-            id: '1',
-            name: 'Tech Solutions',
-            ntn: '1234567-8',
-            strn: 'STRN-123456',
-            businessAddress: '123 Tech Street, Karachi',
-            businessPhone: '+92-300-1234567',
-            businessEmail: 'info@techsolutions.com',
-            businessNatureId: 6, // Service Provider
-            businessNature: 'Service Provider',
-            environment: 'production',
-            isActive: true,
-            createdAt: '2025-01-15',
-            updatedAt: '2025-08-16',
-            users: [
-              {
-                id: '1',
-                email: 'admin@techsolutions.com',
-                firstName: 'John',
-                lastName: 'Doe',
-                role: 'admin',
-                isActive: true,
-              },
-              {
-                id: '2',
-                email: 'user@techsolutions.com',
-                firstName: 'Jane',
-                lastName: 'Smith',
-                role: 'user',
-                isActive: true,
-              },
-            ],
-            _count: {
-              invoices: 1247,
-              users: 2,
-            },
-          },
-          {
-            id: '2',
-            name: 'ABC Trading',
-            ntn: '8765432-1',
-            strn: 'STRN-654321',
-            businessAddress: '456 Trade Avenue, Lahore',
-            businessPhone: '+92-300-7654321',
-            businessEmail: 'contact@abctrading.com',
-            businessNatureId: 5, // Retailer
-            businessNature: 'Retailer',
-            environment: 'sandbox',
-            isActive: true,
-            createdAt: '2025-02-20',
-            updatedAt: '2025-08-16',
-            users: [
-              {
-                id: '3',
-                email: 'admin@abctrading.com',
-                firstName: 'Ahmed',
-                lastName: 'Khan',
-                role: 'admin',
-                isActive: true,
-              },
-            ],
-            _count: {
-              invoices: 456,
-              users: 1,
-            },
-          },
-          {
-            id: '3',
-            name: 'XYZ Corporation',
-            ntn: '1122334-5',
-            strn: 'STRN-112233',
-            businessAddress: '789 Corporate Plaza, Islamabad',
-            businessPhone: '+92-300-1122334',
-            businessEmail: 'info@xyzcorp.com',
-            businessNatureId: 7, // Manufacture
-            businessNature: 'Manufacture',
-            environment: 'production',
-            isActive: false,
-            createdAt: '2025-03-10',
-            updatedAt: '2025-08-16',
-            users: [
-              {
-                id: '4',
-                email: 'admin@xyzcorp.com',
-                firstName: 'Sarah',
-                lastName: 'Johnson',
-                role: 'admin',
-                isActive: false,
-              },
-            ],
-            _count: {
-              invoices: 234,
-              users: 1,
-            },
-          },
-    ];
+    const fetchSellers = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+        
+        // Get token from localStorage or auth context
+        const token = localStorage.getItem('token');
+        
+        const headers: Record<string, string> = {
+          'Content-Type': 'application/json',
+        };
+        
+        if (token) {
+          headers['Authorization'] = `Bearer ${token}`;
+        }
+        
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/sellers`, {
+          method: 'GET',
+          headers,
+        });
 
-    setSellers(mockSellers);
-    setIsLoading(false);
-  }, []);
+        if (!response.ok) {
+          throw new Error(`Failed to fetch sellers: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        
+        if (data.success && data.data) {
+          setSellers(data.data);
+        } else {
+          throw new Error(data.message || 'Failed to fetch sellers');
+        }
+      } catch (err) {
+        console.error('Error fetching sellers:', err);
+        setError(err instanceof Error ? err.message : 'Failed to fetch sellers');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchSellers();
+  }, [user]);
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-PK', {
@@ -169,7 +126,7 @@ export default function SellersPage() {
       case 'Wholesaler': return 'bg-yellow-100 text-yellow-800';
       case 'Retailer': return 'bg-indigo-100 text-indigo-800';
       case 'Service Provider': return 'bg-pink-100 text-pink-800';
-      case 'Manufacture': return 'bg-orange-100 text-orange-800';
+      case 'Manufacturer': return 'bg-orange-100 text-orange-800';
       case 'Other': return 'bg-gray-100 text-gray-800';
       default: return 'bg-gray-100 text-gray-800';
     }
@@ -179,6 +136,24 @@ export default function SellersPage() {
     return (
       <div className="flex items-center justify-center min-h-96">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center min-h-96">
+        <div className="text-center">
+          <ExclamationTriangleIcon className="h-12 w-12 text-red-500 mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-gray-900 mb-2">Error Loading Sellers</h3>
+          <p className="text-gray-500 mb-4">{error}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          >
+            Try Again
+          </button>
+        </div>
       </div>
     );
   }
@@ -250,7 +225,7 @@ export default function SellersPage() {
                 <dl>
                   <dt className="text-sm font-medium text-gray-500 truncate">Production</dt>
                   <dd className="text-lg font-medium text-gray-900">
-                    {sellers.filter(s => s.environment === 'production').length}
+                    {sellers.filter(s => s.fbrProdToken && s.fbrProdToken !== '11111111111111111111111111111111111111111111111111111').length}
                   </dd>
                 </dl>
               </div>
@@ -268,7 +243,7 @@ export default function SellersPage() {
                 <dl>
                   <dt className="text-sm font-medium text-gray-500 truncate">Total Users</dt>
                   <dd className="text-lg font-medium text-gray-900">
-                    {sellers.reduce((total, seller) => total + seller._count.users, 0)}
+                    {sellers.reduce((total, seller) => total + seller.users.length, 0)}
                   </dd>
                 </dl>
               </div>
@@ -325,27 +300,27 @@ export default function SellersPage() {
                           </div>
                         </div>
                         <div className="ml-4">
-                          <div className="text-sm font-medium text-gray-900">{seller.name}</div>
+                          <div className="text-sm font-medium text-gray-900">{seller.businessName}</div>
                           <div className="text-sm text-gray-500">{seller.businessEmail}</div>
-                          <div className="text-sm text-gray-500">ID: {seller.id}</div>
+                          <div className="text-sm text-gray-500">Code: {seller.sellerCode}</div>
                         </div>
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getCategoryColor(seller.businessNature || 'Other')}`}>
-                        {seller.businessNature || 'Unknown'}
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getCategoryColor(seller.businessNature?.businessnature || 'Other')}`}>
+                        {seller.businessNature?.businessnature || 'Unknown'}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {seller.ntn}
+                        {seller.ntnCnic}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        seller.environment === 'production' 
+                        seller.fbrProdToken && seller.fbrProdToken !== '11111111111111111111111111111111111111111111111111111'
                           ? 'bg-green-100 text-green-800' 
                           : 'bg-yellow-100 text-yellow-800'
                       }`}>
-                        {seller.environment === 'production' ? 'Production' : 'Sandbox'}
+                        {seller.fbrProdToken && seller.fbrProdToken !== '11111111111111111111111111111111111111111111111111111' ? 'Production' : 'Sandbox'}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -360,11 +335,12 @@ export default function SellersPage() {
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       <div className="flex items-center">
                         <UserGroupIcon className="h-4 w-4 mr-1 text-gray-400" />
-                        {seller._count.users}
+                        {seller.users.length}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {seller._count.invoices.toLocaleString()}
+                      {/* Invoices count not available in API response, showing N/A */}
+                      N/A
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {formatDate(seller.createdAt)}
