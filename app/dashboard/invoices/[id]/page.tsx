@@ -2,6 +2,9 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
+import { PrinterIcon } from '@heroicons/react/24/outline'
+import { useAuth } from '@/lib/auth-context'
+import InvoicePrint from '@/app/components/invoice-print'
 
 type InvoiceItem = {
   id: number
@@ -171,6 +174,391 @@ export default function InvoiceViewPage({ params }: { params: { id: string } }) 
   const [layout, setLayout] = useState<SectionKey[]>(['seller', 'buyer', 'products', 'tax'])
   const [visibility, setVisibility] = useState<FieldVisibility>(defaultFieldVisibility())
   const [showCustomizer, setShowCustomizer] = useState(false)
+  const { user } = useAuth()
+
+  // Check if user is a seller
+  const isSeller = user?.sellerId !== null || user?.sellerData !== undefined
+
+  // Check if invoice status is submitted
+  const isSubmitted = invoice?.status?.toLowerCase() === 'submitted'
+
+  // Print function
+  const handlePrint = () => {
+    if (typeof window !== 'undefined' && invoice) {
+      // Create a new window for printing
+      const printWindow = window.open('', '_blank', 'width=800,height=600')
+      if (printWindow) {
+        // Write the HTML structure
+        printWindow.document.write(`
+          <!DOCTYPE html>
+          <html>
+            <head>
+              <title>Invoice ${invoice.invoiceRefNo}</title>
+              <style>
+                body { 
+                  margin: 0; 
+                  padding: 20px; 
+                  font-family: Arial, sans-serif;
+                  font-size: 12px;
+                  line-height: 1.2;
+                  color: #000;
+                  background: white;
+                }
+                
+                .invoice-print {
+                  max-width: 100%;
+                  margin: 0 auto;
+                }
+                
+                .invoice-print * {
+                  box-sizing: border-box;
+                }
+                
+                .invoice-header {
+                  display: flex;
+                  justify-content: space-between;
+                  align-items: center;
+                  margin-bottom: 30px;
+                  border-bottom: 2px solid #000;
+                  padding-bottom: 15px;
+                }
+                
+                .invoice-number {
+                  font-size: 18px;
+                  font-weight: 600;
+                }
+                
+                .invoice-date {
+                  font-size: 14px;
+                  color: #666;
+                }
+                
+                .section {
+                  margin-bottom: 25px;
+                }
+                
+                .section-title {
+                  font-size: 14px;
+                  font-weight: bold;
+                  margin-bottom: 10px;
+                  text-transform: uppercase;
+                  border-bottom: 1px solid #ccc;
+                  padding-bottom: 3px;
+                }
+                
+                .details-grid {
+                  display: grid;
+                  grid-template-columns: 1fr 1fr;
+                  gap: 20px;
+                  font-size: 11px;
+                }
+                
+                .detail-item {
+                  margin-bottom: 8px;
+                }
+                
+                .detail-label {
+                  font-weight: 600;
+                  color: #333;
+                  margin-bottom: 2px;
+                }
+                
+                .detail-value {
+                  color: #000;
+                  word-wrap: break-word;
+                }
+                
+                .products-table {
+                  width: 100%;
+                  border-collapse: collapse;
+                  font-size: 10px;
+                  margin-top: 10px;
+                }
+                
+                .products-table th,
+                .products-table td {
+                  border: 1px solid #000;
+                  padding: 4px 6px;
+                  text-align: left;
+                  vertical-align: top;
+                }
+                
+                .products-table th {
+                  background-color: #f0f0f0;
+                  font-weight: bold;
+                  text-align: center;
+                  font-size: 9px;
+                }
+                
+                .products-table .text-right {
+                  text-align: right;
+                }
+                
+                .products-table .text-center {
+                  text-align: center;
+                }
+                
+                .products-table tbody tr:nth-child(even) {
+                  background-color: #f9f9f9;
+                }
+                
+                .products-table tfoot td {
+                  font-weight: bold;
+                  background-color: #e0e0e0;
+                }
+                
+                .tax-grid {
+                  display: grid;
+                  grid-template-columns: 1fr 1fr;
+                  gap: 20px;
+                  font-size: 11px;
+                }
+                
+                .tax-item {
+                  margin-bottom: 8px;
+                }
+                
+                .tax-label {
+                  font-weight: 600;
+                  color: #333;
+                  margin-bottom: 2px;
+                }
+                
+                .tax-value {
+                  color: #000;
+                  font-weight: 500;
+                }
+                
+                @media print {
+                  body { margin: 0; padding: 15px; }
+                  .invoice-number { font-size: 16px; }
+                  .products-table { font-size: 9px; }
+                  .products-table th,
+                  .products-table td { padding: 2px 4px; }
+                }
+              </style>
+            </head>
+            <body>
+              <div class="invoice-print">
+                <!-- Content will be inserted here -->
+              </div>
+            </body>
+          </html>
+        `)
+        
+        // Generate the invoice content
+        const totals = {
+          amount: parseFloat(invoice.totalAmount) || 0,
+          tax: invoice.items.reduce((sum, item) => {
+            return sum + (parseFloat(item.salesTaxWithheldAtSource) || 0) + (parseFloat(item.extraTax) || 0) + (parseFloat(item.furtherTax) || 0)
+          }, 0),
+          total: parseFloat(invoice.totalAmount) || 0
+        }
+
+        const formatCurrency = (amount, currency) => {
+          try {
+            return new Intl.NumberFormat('en-PK', {
+              style: 'currency',
+              currency: currency || 'PKR',
+              minimumFractionDigits: 0,
+            }).format(amount)
+          } catch {
+            return `${amount.toFixed(0)} ${currency || 'PKR'}`
+          }
+        }
+
+        // Generate the HTML content
+        const invoiceContent = `
+          <!-- Invoice Header -->
+          <div class="invoice-header">
+            <div class="invoice-number">Invoice No: ${invoice.invoiceRefNo}</div>
+            <div class="invoice-date">Date: ${new Date(invoice.invoiceDate).toLocaleDateString()}</div>
+          </div>
+
+          <!-- Seller Details -->
+          <div class="section">
+            <div class="section-title">Seller Details</div>
+            <div class="details-grid">
+              <div>
+                <div class="detail-item">
+                  <div class="detail-label">Business Name</div>
+                  <div class="detail-value">${invoice.seller.businessName}</div>
+                </div>
+                <div class="detail-item">
+                  <div class="detail-label">Address</div>
+                  <div class="detail-value">
+                    ${invoice.seller.address1}
+                    ${invoice.seller.address2 ? `, ${invoice.seller.address2}` : ''}
+                    ${invoice.seller.city ? `, ${invoice.seller.city}` : ''}
+                    ${invoice.seller.postalCode ? ` ${invoice.seller.postalCode}` : ''}
+                  </div>
+                </div>
+                <div class="detail-item">
+                  <div class="detail-label">Business Nature</div>
+                  <div class="detail-value">${invoice.seller.businessNature?.businessNature || ''}</div>
+                </div>
+              </div>
+              <div>
+                <div class="detail-item">
+                  <div class="detail-label">NTN / CNIC</div>
+                  <div class="detail-value">${invoice.seller.ntnCnic}</div>
+                </div>
+                <div class="detail-item">
+                  <div class="detail-label">Contact</div>
+                  <div class="detail-value">
+                    ${invoice.seller.businessEmail}
+                    ${invoice.seller.businessPhone ? ` / ${invoice.seller.businessPhone}` : ''}
+                  </div>
+                </div>
+                <div class="detail-item">
+                  <div class="detail-label">Industry</div>
+                  <div class="detail-value">${invoice.seller.industry?.industryName || ''}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Buyer Details -->
+          <div class="section">
+            <div class="section-title">Buyer Details</div>
+            <div class="details-grid">
+              <div>
+                <div class="detail-item">
+                  <div class="detail-label">Business Name</div>
+                  <div class="detail-value">${invoice.buyerBusinessName}</div>
+                </div>
+                <div class="detail-item">
+                  <div class="detail-label">Address</div>
+                  <div class="detail-value">${invoice.buyerAddress}</div>
+                </div>
+                <div class="detail-item">
+                  <div class="detail-label">Registration Type</div>
+                  <div class="detail-value">${invoice.buyerRegistrationType}</div>
+                </div>
+              </div>
+              <div>
+                <div class="detail-item">
+                  <div class="detail-label">NTN / CNIC</div>
+                  <div class="detail-value">${invoice.buyerNTNCNIC}</div>
+                </div>
+                <div class="detail-item">
+                  <div class="detail-label">Province</div>
+                  <div class="detail-value">${invoice.buyerProvince}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Products List Details -->
+          <div class="section">
+            <div class="section-title">Products List Details</div>
+            <table class="products-table">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Description</th>
+                  <th>HS Code</th>
+                  <th class="text-right">Rate</th>
+                  <th class="text-center">UoM</th>
+                  <th class="text-right">Qty</th>
+                  <th class="text-right">Total</th>
+                  <th class="text-right">Sales Excl. ST</th>
+                  <th class="text-right">Fixed Value</th>
+                  <th class="text-center">Tax App</th>
+                  <th class="text-right">Sales Tax</th>
+                  <th class="text-right">Extra Tax</th>
+                  <th class="text-right">Further Tax</th>
+                  <th class="text-center">SRO</th>
+                  <th class="text-right">FED</th>
+                  <th class="text-right">Discount</th>
+                  <th>Sale Type</th>
+                  <th class="text-center">SRO Serial</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${invoice.items?.map((item, index) => `
+                  <tr>
+                    <td>${index + 1}</td>
+                    <td>${item.productDescription}</td>
+                    <td>${item.hsCode || '—'}</td>
+                    <td class="text-right">${formatCurrency(parseFloat(item.rate), 'PKR')}</td>
+                    <td class="text-center">${item.uoM}</td>
+                    <td class="text-right">${item.quantity}</td>
+                    <td class="text-right">${formatCurrency(parseFloat(item.totalValues), 'PKR')}</td>
+                    <td class="text-right">${formatCurrency(parseFloat(item.valueSalesExcludingST), 'PKR')}</td>
+                    <td class="text-right">${formatCurrency(parseFloat(item.fixedNotifiedValueOrRetailPrice), 'PKR')}</td>
+                    <td class="text-center">${item.salesTaxApplicable}</td>
+                    <td class="text-right">${formatCurrency(parseFloat(item.salesTaxWithheldAtSource), 'PKR')}</td>
+                    <td class="text-right">${formatCurrency(parseFloat(item.extraTax), 'PKR')}</td>
+                    <td class="text-right">${formatCurrency(parseFloat(item.furtherTax), 'PKR')}</td>
+                    <td class="text-center">${item.sroScheduleNo}</td>
+                    <td class="text-right">${formatCurrency(parseFloat(item.fedPayable), 'PKR')}</td>
+                    <td class="text-right">${formatCurrency(parseFloat(item.discount), 'PKR')}</td>
+                    <td>${item.saleType}</td>
+                    <td class="text-center">${item.sroItemSerialNo}</td>
+                  </tr>
+                `).join('') || ''}
+              </tbody>
+              <tfoot>
+                <tr>
+                  <td colspan="6" class="text-right">Totals</td>
+                  <td class="text-right">${formatCurrency(totals.total, 'PKR')}</td>
+                  <td class="text-right">${formatCurrency(totals.amount, 'PKR')}</td>
+                  <td class="text-right">${formatCurrency(totals.amount, 'PKR')}</td>
+                  <td class="text-center">—</td>
+                  <td class="text-right">${formatCurrency(totals.tax, 'PKR')}</td>
+                  <td class="text-right">${formatCurrency(totals.tax, 'PKR')}</td>
+                  <td class="text-right">${formatCurrency(totals.tax, 'PKR')}</td>
+                  <td class="text-center">—</td>
+                  <td class="text-right">${formatCurrency(0, 'PKR')}</td>
+                  <td class="text-right">${formatCurrency(0, 'PKR')}</td>
+                  <td class="text-center">—</td>
+                  <td class="text-center">—</td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+
+          <!-- Tax Details -->
+          <div class="section">
+            <div class="section-title">Tax Details (FBR Pakistan)</div>
+            <div class="tax-grid">
+              <div>
+                <div class="tax-item">
+                  <div class="tax-label">Net Amount</div>
+                  <div class="tax-value">${formatCurrency(totals.amount, 'PKR')}</div>
+                </div>
+                <div class="tax-item">
+                  <div class="tax-label">FBR Status</div>
+                  <div class="tax-value">${invoice.status}</div>
+                </div>
+              </div>
+              <div>
+                <div class="tax-item">
+                  <div class="tax-label">Tax Amount</div>
+                  <div class="tax-value">${formatCurrency(totals.tax, 'PKR')}</div>
+                </div>
+                <div class="tax-item">
+                  <div class="tax-label">Total Amount</div>
+                  <div class="tax-value">${formatCurrency(totals.total, 'PKR')}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        `
+
+        // Insert the content
+        printWindow.document.querySelector('.invoice-print').innerHTML = invoiceContent
+        
+        // Focus and print
+        printWindow.focus()
+        setTimeout(() => {
+          printWindow.print()
+          printWindow.close()
+        }, 100)
+      }
+    }
+  }
 
   useEffect(() => {
     const fetchInvoice = async () => {
@@ -370,13 +758,23 @@ export default function InvoiceViewPage({ params }: { params: { id: string } }) 
             <p className="mt-1 text-sm text-green-600">FBR Invoice: {invoice.fbrInvoiceNumber}</p>
           )}
         </div>
-        <div className="mt-4 sm:mt-0 space-x-3">
+        <div className="mt-4 sm:mt-0 space-x-3 no-print">
+          {isSeller && isSubmitted && (
+            <button
+              onClick={handlePrint}
+              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              title="Print this invoice (only available for sellers and submitted invoices)"
+            >
+              <PrinterIcon className="h-4 w-4 mr-2" />
+              Print Invoice
+            </button>
+          )}
           <Link href="/dashboard/invoices" className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">Back</Link>
         </div>
       </div>
 
       <div className="bg-white shadow rounded-lg">
-        <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
+        <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between no-print">
           <div className="text-sm text-gray-700">Reorder sections (saved per seller)</div>
           <div className="flex items-center gap-2">
             {layout.map((key, idx) => (
@@ -390,7 +788,7 @@ export default function InvoiceViewPage({ params }: { params: { id: string } }) 
           </div>
         </div>
         {showCustomizer && (
-          <div className="px-4 py-3 border-b border-gray-200 bg-gray-50">
+          <div className="px-4 py-3 border-b border-gray-200 bg-gray-50 no-print">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs text-gray-800">
               <div>
                 <div className="font-semibold mb-1">Seller</div>
@@ -580,7 +978,7 @@ export default function InvoiceViewPage({ params }: { params: { id: string } }) 
                         </div>
                         <div>
                           <div className="text-gray-500">FBR Status</div>
-                          <div className="text-gray-900">{invoice.fbrInvoiceNumber ? 'Issued' : invoice.status === 'failed' ? 'Failed' : 'Pending'}</div>
+                          <div className="text-gray-900">{invoice.status}</div>
                         </div>
                         {invoice.fbrInvoiceNumber && (
                           <div className="sm:col-span-2">
