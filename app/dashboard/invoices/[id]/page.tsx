@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
-import { PrinterIcon } from '@heroicons/react/24/outline'
+import { PrinterIcon, PaperAirplaneIcon } from '@heroicons/react/24/outline'
 import { useAuth } from '@/lib/auth-context'
 import InvoicePrint from '@/app/components/invoice-print'
 
@@ -182,6 +182,46 @@ export default function InvoiceViewPage({ params }: { params: { id: string } }) 
   // Check if invoice status is submitted
   const isSubmitted = invoice?.status?.toLowerCase() === 'submitted'
 
+  // Handle posting invoice to FBR
+  const handlePostInvoice = async () => {
+    if (!invoice) return;
+    
+    try {
+      const token = localStorage.getItem('authToken') || localStorage.getItem('token');
+      
+      if (!token) {
+        alert('No authorization token found. Please login again.');
+        return;
+      }
+
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
+      const response = await fetch(`${apiUrl}/invoice/post-invoice`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          invoiceIds: [invoice.id]
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        alert('Invoice posted successfully!');
+        // Refresh the page to show updated status
+        window.location.reload();
+      } else {
+        const errorMessage = data.message || data.error || 'Failed to post invoice';
+        alert(`Failed to post invoice: ${errorMessage}`);
+      }
+    } catch (error) {
+      console.error('Error posting invoice:', error);
+      alert('Error posting invoice. Please try again.');
+    }
+  };
+
   // Print function
   const handlePrint = () => {
     if (typeof window !== 'undefined' && invoice) {
@@ -355,7 +395,7 @@ export default function InvoiceViewPage({ params }: { params: { id: string } }) 
           total: parseFloat(invoice.totalAmount) || 0
         }
 
-        const formatCurrency = (amount, currency) => {
+        const formatCurrency = (amount: number, currency: string) => {
           try {
             return new Intl.NumberFormat('en-PK', {
               style: 'currency',
@@ -548,7 +588,10 @@ export default function InvoiceViewPage({ params }: { params: { id: string } }) 
         `
 
         // Insert the content
-        printWindow.document.querySelector('.invoice-print').innerHTML = invoiceContent
+        const printElement = printWindow.document.querySelector('.invoice-print')
+        if (printElement) {
+          printElement.innerHTML = invoiceContent
+        }
         
         // Focus and print
         printWindow.focus()
@@ -759,6 +802,16 @@ export default function InvoiceViewPage({ params }: { params: { id: string } }) 
           )}
         </div>
         <div className="mt-4 sm:mt-0 space-x-3 no-print">
+          {isSeller && (invoice.status === 'valid' || invoice.status === 'pending') && (
+            <button
+              onClick={handlePostInvoice}
+              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+              title="Post this invoice to FBR (only available for sellers and valid/pending invoices)"
+            >
+              <PaperAirplaneIcon className="h-4 w-4 mr-2" />
+              Post to FBR
+            </button>
+          )}
           {isSeller && isSubmitted && (
             <button
               onClick={handlePrint}

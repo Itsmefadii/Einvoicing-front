@@ -14,7 +14,8 @@ import {
   EyeIcon,
   PencilIcon,
   TrashIcon,
-  ArrowUpTrayIcon
+  ArrowUpTrayIcon,
+  PaperAirplaneIcon
 } from '@heroicons/react/24/outline';
 
 interface InvoiceItem {
@@ -51,7 +52,7 @@ interface Invoice {
   invoiceRefNo: string;
   scenarioId: number;
   totalAmount: string;
-  status: 'pending' | 'valid' | 'invalid' | 'submitted';
+  status: 'pending' | 'valid' | 'invalid' | 'submitted' | 'failed' | 'draft';
   fbrInvoiceNumber?: string;
   createdAt: string;
   updatedAt: string;
@@ -157,6 +158,8 @@ export default function InvoicesPage() {
       valid: { color: 'bg-green-100 text-green-800', icon: CheckCircleIcon },
       invalid: { color: 'bg-red-100 text-red-800', icon: ExclamationTriangleIcon },
       submitted: { color: 'bg-blue-100 text-blue-800', icon: DocumentTextIcon },
+      failed: { color: 'bg-red-100 text-red-800', icon: ExclamationTriangleIcon },
+      draft: { color: 'bg-gray-100 text-gray-800', icon: DocumentTextIcon },
     };
 
     const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.pending;
@@ -191,7 +194,48 @@ export default function InvoicesPage() {
   const canCreateInvoice = user?.roleId !== 1; // Admin has roleId 1
   const canUploadInvoice = user?.roleId !== 1; // Admin has roleId 1
   
+  // Check if user is a seller
+  const isSeller = user?.sellerId !== null || user?.sellerData !== undefined
+  
   console.log('User role:', user?.roleId, 'Can upload:', canUploadInvoice, 'Can create:', canCreateInvoice);
+
+  // Handle posting invoice to FBR
+  const handlePostInvoice = async (invoiceId: number) => {
+    try {
+      const token = localStorage.getItem('authToken') || localStorage.getItem('token');
+      
+      if (!token) {
+        alert('No authorization token found. Please login again.');
+        return;
+      }
+
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
+      const response = await fetch(`${apiUrl}/invoice/post-invoice`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          invoiceIds: [invoiceId]
+        }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        alert('Invoice posted successfully!');
+        // Refresh the invoice list
+        window.location.reload();
+      } else {
+        const errorMessage = data.message || data.error || 'Failed to post invoice';
+        alert(`Failed to post invoice: ${errorMessage}`);
+      }
+    } catch (error) {
+      console.error('Error posting invoice:', error);
+      alert('Error posting invoice. Please try again.');
+    }
+  };
 
   // Handle Excel file upload
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -359,6 +403,8 @@ export default function InvoicesPage() {
               <option value="valid">Valid</option>
               <option value="invalid">Invalid</option>
               <option value="submitted">Submitted</option>
+              <option value="failed">Failed</option>
+              <option value="draft">Draft</option>
             </select>
           </div>
 
@@ -444,7 +490,7 @@ export default function InvoicesPage() {
                       >
                         <EyeIcon className="h-4 w-4" />
                       </Link>
-                      {invoice.status === 'draft' && (
+                      {isSeller && invoice.status !== 'submitted' && (
                         <Link
                           href={`/dashboard/invoices/${invoice.id}/edit`}
                           className="text-green-600 hover:text-green-900 p-1"
@@ -452,6 +498,15 @@ export default function InvoicesPage() {
                         >
                           <PencilIcon className="h-4 w-4" />
                         </Link>
+                      )}
+                      {isSeller && (invoice.status === 'valid' || invoice.status === 'pending' || invoice.status === 'invalid') && (
+                        <button
+                          onClick={() => handlePostInvoice(invoice.id)}
+                          className="text-green-600 hover:text-green-900 p-1"
+                          title="Post to FBR"
+                        >
+                          <PaperAirplaneIcon className="h-4 w-4" />
+                        </button>
                       )}
                       {invoice.status === 'failed' && (
                         <button
