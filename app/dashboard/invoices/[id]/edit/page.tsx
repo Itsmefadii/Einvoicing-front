@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useParams } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import { 
   PlusIcon, 
@@ -11,20 +11,11 @@ import {
   UserIcon,
   CurrencyDollarIcon,
   ExclamationTriangleIcon,
-  CheckCircleIcon,
-  XCircleIcon
+  ArrowLeftIcon
 } from '@heroicons/react/24/outline';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/app/components/ui/card';
 import { Button } from '@/app/components/ui/button';
 import { Input } from '@/app/components/ui/input';
-
-interface HSCode {
-  id: number;
-  hsCode: string;
-  description: string;
-  createdAt: string;
-  updatedAt: string;
-}
 
 interface InvoiceItem {
   id: string;
@@ -60,23 +51,19 @@ interface InvoiceForm {
   items: InvoiceItem[];
 }
 
-export default function CreateInvoicePage() {
+export default function EditInvoicePage() {
   const { user, isLoading: authLoading } = useAuth();
   const router = useRouter();
+  const params = useParams();
   const [isCheckingPermissions, setIsCheckingPermissions] = useState(true);
-  const [hsCodes, setHsCodes] = useState<HSCode[]>([]);
-  const [isLoadingHsCodes, setIsLoadingHsCodes] = useState(false);
-  const [hsCodeSearch, setHsCodeSearch] = useState<{ [itemId: string]: string }>({});
-  const [showHsCodeDropdown, setShowHsCodeDropdown] = useState<{ [itemId: string]: boolean }>({});
-  const [showModal, setShowModal] = useState(false);
-  const [modalType, setModalType] = useState<'success' | 'error'>('success');
-  const [modalMessage, setModalMessage] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [isDataLoaded, setIsDataLoaded] = useState(false);
 
   // Check permissions on component mount
   useEffect(() => {
     if (!authLoading && user) {
-      // Admin users (roleId === 1) cannot create invoices
+      // Admin users (roleId === 1) cannot edit invoices
       if (user.roleId === 1) {
         router.push('/dashboard/invoices?error=access_denied');
         return;
@@ -85,20 +72,35 @@ export default function CreateInvoicePage() {
     }
   }, [user, authLoading, router]);
 
-  // Fetch HS codes
+  const [form, setForm] = useState<InvoiceForm>({
+    invoiceRefNo: '',
+    invoiceType: 'SALE',
+    invoiceDate: '',
+    buyerBusinessName: '',
+    buyerNTNCNIC: '',
+    buyerProvince: '',
+    buyerAddress: '',
+    buyerRegistrationType: 'REGISTERED',
+    scenarioId: '',
+    items: []
+  });
+
+  // Fetch invoice data
   useEffect(() => {
-    const fetchHsCodes = async () => {
+    const fetchInvoice = async () => {
       try {
-        setIsLoadingHsCodes(true);
+        setIsLoading(true);
+        setError(null);
+
         const token = localStorage.getItem('authToken') || localStorage.getItem('token');
         
         if (!token) {
-          console.error('No authorization token found');
+          setError('No authorization token found. Please login again.');
           return;
         }
 
         const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
-        const response = await fetch(`${apiUrl}/system-configs/hs-codes`, {
+        const response = await fetch(`${apiUrl}/invoice/${params.id}`, {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
@@ -109,63 +111,58 @@ export default function CreateInvoicePage() {
         if (response.ok) {
           const data = await response.json();
           if (data.success && data.data) {
-            setHsCodes(data.data);
+            const invoice = data.data;
+            setForm({
+              invoiceRefNo: invoice.invoiceRefNo || '',
+              invoiceType: invoice.invoiceType || 'SALE',
+              invoiceDate: invoice.invoiceDate ? invoice.invoiceDate.split('T')[0] : '',
+              buyerBusinessName: invoice.buyerBusinessName || '',
+              buyerNTNCNIC: invoice.buyerNTNCNIC || '',
+              buyerProvince: invoice.buyerProvince || '',
+              buyerAddress: invoice.buyerAddress || '',
+              buyerRegistrationType: invoice.buyerRegistrationType || 'REGISTERED',
+              scenarioId: invoice.scenarioId?.toString() || '',
+              items: invoice.items?.map((item: any, index: number) => ({
+                id: item.id?.toString() || (index + 1).toString(),
+                productDescription: item.productDescription || '',
+                hsCode: item.hsCode || '',
+                rate: item.rate?.toString() || '',
+                uoM: item.uoM || 'PCS',
+                quantity: item.quantity?.toString() || '',
+                totalValues: item.totalValues?.toString() || '',
+                valueSalesExcludingST: item.valueSalesExcludingST?.toString() || '',
+                fixedNotifiedValueOrRetailPrice: item.fixedNotifiedValueOrRetailPrice?.toString() || '',
+                salesTaxApplicable: item.salesTaxApplicable?.toString() || '',
+                salesTaxWithheldAtSource: item.salesTaxWithheldAtSource?.toString() || '',
+                extraTax: item.extraTax?.toString() || '',
+                furtherTax: item.furtherTax?.toString() || '',
+                sroScheduleNo: item.sroScheduleNo?.toString() || '',
+                fedPayable: item.fedPayable?.toString() || '',
+                discount: item.discount?.toString() || '',
+                saleType: item.saleType || 'LOCAL',
+                sroItemSerialNo: item.sroItemSerialNo || ''
+              })) || []
+            });
+            setIsDataLoaded(true);
+          } else {
+            setError(data.message || 'Failed to fetch invoice');
           }
         } else {
-          console.error('Failed to fetch HS codes:', response.status);
+          const errorData = await response.json();
+          setError(errorData.message || 'Failed to fetch invoice');
         }
       } catch (error) {
-        console.error('Error fetching HS codes:', error);
+        console.error('Error fetching invoice:', error);
+        setError('Error fetching invoice. Please try again.');
       } finally {
-        setIsLoadingHsCodes(false);
+        setIsLoading(false);
       }
     };
 
-    fetchHsCodes();
-  }, []);
-
-  // Filter HS codes based on search
-  const getFilteredHsCodes = (itemId: string) => {
-    const searchTerm = hsCodeSearch[itemId] || '';
-    if (!searchTerm) return hsCodes;
-    return hsCodes.filter(hsCode => 
-      hsCode.hsCode.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-  };
-
-  const [form, setForm] = useState<InvoiceForm>({
-    invoiceRefNo: '',
-    invoiceType: '',
-    invoiceDate: new Date().toISOString().split('T')[0],
-    buyerBusinessName: '',
-    buyerNTNCNIC: '',
-    buyerProvince: '',
-    buyerAddress: '',
-    buyerRegistrationType: '',
-    scenarioId: '',
-    items: [
-      {
-        id: '1',
-        productDescription: '',
-        hsCode: '',
-        rate: '',
-        uoM: '',
-        quantity: '',
-        totalValues: '',
-        valueSalesExcludingST: '',
-        fixedNotifiedValueOrRetailPrice: '',
-        salesTaxApplicable: '',
-        salesTaxWithheldAtSource: '',
-        extraTax: '',
-        furtherTax: '',
-        sroScheduleNo: '',
-        fedPayable: '',
-        discount: '',
-        saleType: '',
-        sroItemSerialNo: ''
-      }
-    ]
-  });
+    if (params.id) {
+      fetchInvoice();
+    }
+  }, [params.id]);
 
   const addItem = () => {
     const newItem: InvoiceItem = {
@@ -173,7 +170,7 @@ export default function CreateInvoicePage() {
       productDescription: '',
       hsCode: '',
       rate: '',
-      uoM: '',
+      uoM: 'PCS',
       quantity: '',
       totalValues: '',
       valueSalesExcludingST: '',
@@ -185,7 +182,7 @@ export default function CreateInvoicePage() {
       sroScheduleNo: '',
       fedPayable: '',
       discount: '',
-      saleType: '',
+      saleType: 'LOCAL',
       sroItemSerialNo: ''
     };
     setForm(prev => ({
@@ -210,38 +207,36 @@ export default function CreateInvoicePage() {
         if (item.id === id) {
           const updatedItem = { ...item, [field]: value };
           
-          // Auto-calculate values when rate or sales tax excluding ST changes
-          if (field === 'quantity' || field === 'rate') {
-            // No automatic calculation - user must enter values manually
-          }
-          
-          // Auto-calculate sales tax applicable when sales excluding ST changes
-          if (field === 'valueSalesExcludingST') {
-            const rateValue = parseFloat(updatedItem.rate) || 0;
-            const salesExcludingST = parseFloat(updatedItem.valueSalesExcludingST) || 0;
-            if (rateValue > 0 && salesExcludingST > 0) {
-              updatedItem.salesTaxApplicable = ((salesExcludingST * rateValue) / 100).toString();
-            } else {
-              updatedItem.salesTaxApplicable = '';
+          // Only perform calculations after data is loaded and user is making changes
+          if (isDataLoaded) {
+            // Auto-calculate sales tax applicable when sales excluding ST changes
+            if (field === 'valueSalesExcludingST') {
+              const rateValue = parseFloat(updatedItem.rate) || 0;
+              const salesExcludingST = parseFloat(updatedItem.valueSalesExcludingST) || 0;
+              if (rateValue > 0 && salesExcludingST > 0) {
+                updatedItem.salesTaxApplicable = ((salesExcludingST * rateValue) / 100).toString();
+              } else {
+                updatedItem.salesTaxApplicable = '';
+              }
             }
-          }
-          
-          // Auto-calculate total values when tax fields change
-          if (field === 'valueSalesExcludingST' || field === 'salesTaxApplicable' || 
-              field === 'salesTaxWithheldAtSource' || field === 'extraTax' || 
-              field === 'furtherTax' || field === 'fedPayable' || field === 'discount') {
-            const salesExcludingST = parseFloat(updatedItem.valueSalesExcludingST) || 0;
-            const salesTaxApplicable = parseFloat(updatedItem.salesTaxApplicable) || 0;
-            const salesTaxWithheld = parseFloat(updatedItem.salesTaxWithheldAtSource) || 0;
-            const extraTaxAmount = parseFloat(updatedItem.extraTax) || 0;
-            const furtherTaxAmount = parseFloat(updatedItem.furtherTax) || 0;
-            const fedPayableAmount = parseFloat(updatedItem.fedPayable) || 0;
-            const discountAmount = parseFloat(updatedItem.discount) || 0;
             
-            // Total = Sales Excluding ST + Sales Tax Applicable + Sales Tax + Extra Tax + Further Tax + FED Payable - Discount
-            const totalValue = salesExcludingST + salesTaxApplicable + salesTaxWithheld + 
-                             extraTaxAmount + furtherTaxAmount + fedPayableAmount - discountAmount;
-            updatedItem.totalValues = totalValue.toString();
+            // Auto-calculate total values when tax fields change
+            if (field === 'valueSalesExcludingST' || field === 'salesTaxApplicable' || 
+                field === 'salesTaxWithheldAtSource' || field === 'extraTax' || 
+                field === 'furtherTax' || field === 'fedPayable' || field === 'discount') {
+              const salesExcludingST = parseFloat(updatedItem.valueSalesExcludingST) || 0;
+              const salesTaxApplicable = parseFloat(updatedItem.salesTaxApplicable) || 0;
+              const salesTaxWithheld = parseFloat(updatedItem.salesTaxWithheldAtSource) || 0;
+              const extraTaxAmount = parseFloat(updatedItem.extraTax) || 0;
+              const furtherTaxAmount = parseFloat(updatedItem.furtherTax) || 0;
+              const fedPayableAmount = parseFloat(updatedItem.fedPayable) || 0;
+              const discountAmount = parseFloat(updatedItem.discount) || 0;
+              
+              // Total = Sales Excluding ST + Sales Tax Applicable + Sales Tax + Extra Tax + Further Tax + FED Payable - Discount
+              const totalValue = salesExcludingST + salesTaxApplicable + salesTaxWithheld + 
+                               extraTaxAmount + furtherTaxAmount + fedPayableAmount - discountAmount;
+              updatedItem.totalValues = totalValue.toString();
+            }
           }
           
           return updatedItem;
@@ -260,70 +255,48 @@ export default function CreateInvoicePage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('Submitting invoice:', form);
-    
-    setIsSubmitting(true);
+    console.log('Updating invoice:', form);
     
     try {
       const token = localStorage.getItem('authToken') || localStorage.getItem('token');
       
       if (!token) {
-        setModalType('error');
-        setModalMessage('No authorization token found. Please login again.');
-        setShowModal(true);
-        setIsSubmitting(false);
+        alert('No authorization token found. Please login again.');
         return;
       }
 
-      const { total } = calculateTotals();
-      const payload = {
-        ...form,
-        totalAmount: total.toString()
-      };
-
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
-      const response = await fetch(`${apiUrl}/invoice`, {
-        method: 'POST',
+      const response = await fetch(`${apiUrl}/invoice/${params.id}`, {
+        method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
         },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({
+          ...form,
+          totalAmount: calculateTotals().total.toString()
+        }),
       });
 
       const data = await response.json();
 
       if (response.ok && data.success) {
-        setModalType('success');
-        setModalMessage('Invoice created successfully! You will be redirected to the invoices list.');
-        setShowModal(true);
+        alert('Invoice updated successfully!');
+        router.push(`/dashboard/invoices/${params.id}`);
       } else {
-        const errorMessage = data.message || data.error || 'Failed to create invoice';
-        setModalType('error');
-        setModalMessage(`Failed to create invoice: ${errorMessage}`);
-        setShowModal(true);
+        const errorMessage = data.message || data.error || 'Failed to update invoice';
+        alert(`Failed to update invoice: ${errorMessage}`);
       }
     } catch (error) {
-      console.error('Error creating invoice:', error);
-      setModalType('error');
-      setModalMessage('Error creating invoice. Please try again.');
-      setShowModal(true);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleModalClose = () => {
-    setShowModal(false);
-    if (modalType === 'success') {
-      router.push('/dashboard/invoices');
+      console.error('Error updating invoice:', error);
+      alert('Error updating invoice. Please try again.');
     }
   };
 
   const { subtotal, taxAmount, total } = calculateTotals();
 
   // Show loading while checking permissions
-  if (authLoading || isCheckingPermissions) {
+  if (authLoading || isCheckingPermissions || isLoading) {
     return (
       <div className="flex items-center justify-center min-h-96">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
@@ -338,7 +311,22 @@ export default function CreateInvoicePage() {
         <div className="text-center">
           <ExclamationTriangleIcon className="h-16 w-16 text-red-500 mx-auto mb-4" />
           <h2 className="text-2xl font-bold text-gray-900 mb-2">Access Denied</h2>
-          <p className="text-gray-600 mb-4">You don't have permission to create invoices.</p>
+          <p className="text-gray-600 mb-4">You don't have permission to edit invoices.</p>
+          <Button onClick={() => router.push('/dashboard/invoices')}>
+            Back to Invoices
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center min-h-96">
+        <div className="text-center">
+          <ExclamationTriangleIcon className="h-16 w-16 text-red-500 mx-auto mb-4" />
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Error</h2>
+          <p className="text-gray-600 mb-4">{error}</p>
           <Button onClick={() => router.push('/dashboard/invoices')}>
             Back to Invoices
           </Button>
@@ -350,9 +338,19 @@ export default function CreateInvoicePage() {
   return (
     <div className="space-y-6">
       {/* Page Header */}
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900">Create Invoice</h1>
-        <p className="text-gray-600">Create a new invoice for your customer</p>
+      <div className="flex items-center space-x-4">
+        <Button
+          variant="outline"
+          onClick={() => router.push(`/dashboard/invoices/${params.id}`)}
+          className="flex items-center space-x-2"
+        >
+          <ArrowLeftIcon className="h-4 w-4" />
+          <span>Back to Invoice</span>
+        </Button>
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Edit Invoice</h1>
+          <p className="text-gray-600">Update invoice details and items</p>
+        </div>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
@@ -384,9 +382,8 @@ export default function CreateInvoicePage() {
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   required
                 >
-                  <option value="">Select Invoice Type</option>
-                  <option value="SALE INVOICE">Sale Invoice</option>
-                  <option value="DEBIT NOTE">Debit Note</option>
+                  <option value="SALE">Sale Invoice</option>
+                  <option value="DEBIT_NOTE">Debit Note</option>
                 </select>
               </div>
               <div>
@@ -469,7 +466,6 @@ export default function CreateInvoicePage() {
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   required
                 >
-                  <option value="">Select Registration Type</option>
                   <option value="REGISTERED">Registered</option>
                   <option value="UNREGISTERED">Unregistered</option>
                   <option value="CONSUMER">Consumer</option>
@@ -505,59 +501,20 @@ export default function CreateInvoicePage() {
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">Product Description</label>
-                    <Input
+                      <Input
                         value={item.productDescription}
                         onChange={(e) => updateItem(item.id, 'productDescription', e.target.value)}
                         placeholder="Product description"
-                      required
-                    />
-                  </div>
+                        required
+                      />
+                    </div>
                     <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">HS Code</label>
-                    <div className="relative">
+                      <label className="block text-sm font-medium text-gray-700 mb-2">HS Code</label>
                       <Input
                         value={item.hsCode}
-                        onChange={(e) => {
-                          const value = e.target.value;
-                          updateItem(item.id, 'hsCode', value);
-                          setHsCodeSearch(prev => ({ ...prev, [item.id]: value }));
-                          setShowHsCodeDropdown(prev => ({ ...prev, [item.id]: true }));
-                        }}
-                        onFocus={() => {
-                          setShowHsCodeDropdown(prev => ({ ...prev, [item.id]: true }));
-                        }}
-                        onBlur={() => {
-                          setTimeout(() => {
-                            setShowHsCodeDropdown(prev => ({ ...prev, [item.id]: false }));
-                          }, 150);
-                        }}
-                        placeholder="Type to search HS Code"
-                        className="w-full"
+                        onChange={(e) => updateItem(item.id, 'hsCode', e.target.value)}
+                        placeholder="HS Code"
                       />
-                      {showHsCodeDropdown[item.id] && (
-                        <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-auto">
-                          {isLoadingHsCodes ? (
-                            <div className="px-3 py-2 text-sm text-gray-500">Loading HS Codes...</div>
-                          ) : getFilteredHsCodes(item.id).length > 0 ? (
-                            getFilteredHsCodes(item.id).map((hsCode) => (
-                              <div
-                                key={hsCode.id}
-                                className="px-3 py-2 text-sm hover:bg-gray-100 cursor-pointer"
-                                onMouseDown={(e) => {
-                                  e.preventDefault();
-                                  updateItem(item.id, 'hsCode', hsCode.hsCode);
-                                  setShowHsCodeDropdown(prev => ({ ...prev, [item.id]: false }));
-                                }}
-                              >
-                                {hsCode.hsCode}
-                              </div>
-                            ))
-                          ) : (
-                            <div className="px-3 py-2 text-sm text-gray-500">No HS codes found</div>
-                          )}
-                        </div>
-                      )}
-                    </div>
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">UoM</label>
@@ -567,7 +524,6 @@ export default function CreateInvoicePage() {
                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                         required
                       >
-                        <option value="">Select UoM</option>
                         <option value="PCS">PCS</option>
                         <option value="KG">KG</option>
                         <option value="LTR">LTR</option>
@@ -590,7 +546,7 @@ export default function CreateInvoicePage() {
                         placeholder="Enter quantity"
                         required
                       />
-                  </div>
+                    </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">Rate (%)</label>
                       <Input
@@ -617,7 +573,7 @@ export default function CreateInvoicePage() {
                       <Input
                         type="number"
                         value={item.valueSalesExcludingST}
-                        onChange={(e) => updateItem(item.id, 'valueSalesExcludingST', parseFloat(e.target.value) || 0)}
+                        onChange={(e) => updateItem(item.id, 'valueSalesExcludingST', e.target.value)}
                         min="0"
                         step="0.01"
                         placeholder="Enter sales excluding ST"
@@ -632,7 +588,7 @@ export default function CreateInvoicePage() {
                       <Input
                         type="number"
                         value={item.salesTaxApplicable}
-                        onChange={(e) => updateItem(item.id, 'salesTaxApplicable', parseFloat(e.target.value) || 0)}
+                        onChange={(e) => updateItem(item.id, 'salesTaxApplicable', e.target.value)}
                         min="0"
                         step="0.01"
                         placeholder="Auto-calculated"
@@ -717,7 +673,6 @@ export default function CreateInvoicePage() {
                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                         required
                       >
-                        <option value="">Select Sale Type</option>
                         <option value="LOCAL">Local</option>
                         <option value="EXPORT">Export</option>
                       </select>
@@ -735,17 +690,17 @@ export default function CreateInvoicePage() {
                       />
                     </div>
                     <div className="flex items-end">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => removeItem(item.id)}
-                      disabled={form.items.length === 1}
-                      className="w-full"
-                    >
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => removeItem(item.id)}
+                        disabled={form.items.length === 1}
+                        className="w-full"
+                      >
                         <TrashIcon className="h-4 w-4 mr-2" />
                         Remove Item
-                    </Button>
+                      </Button>
                     </div>
                   </div>
                 </div>
@@ -773,18 +728,18 @@ export default function CreateInvoicePage() {
             <CardDescription>FBR compliant invoice totals</CardDescription>
           </CardHeader>
           <CardContent>
-              <div className="space-y-3">
-                <div className="flex justify-between">
+            <div className="space-y-3">
+              <div className="flex justify-between">
                 <span className="text-gray-600">Net Amount (Sales Excluding ST):</span>
-                  <span className="font-medium">PKR {subtotal.toLocaleString()}</span>
-                </div>
-                <div className="flex justify-between">
+                <span className="font-medium">PKR {subtotal.toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between">
                 <span className="text-gray-600">Total Tax Amount:</span>
-                  <span className="font-medium">PKR {taxAmount.toLocaleString()}</span>
-                </div>
-                <div className="flex justify-between text-lg font-bold border-t pt-3">
+                <span className="font-medium">PKR {taxAmount.toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between text-lg font-bold border-t pt-3">
                 <span>Total Amount:</span>
-                  <span>PKR {total.toLocaleString()}</span>
+                <span>PKR {total.toLocaleString()}</span>
               </div>
             </div>
           </CardContent>
@@ -792,51 +747,14 @@ export default function CreateInvoicePage() {
 
         {/* Submit Button */}
         <div className="flex justify-end space-x-3">
-          <Button variant="outline" type="button" onClick={() => router.push('/dashboard/invoices')}>
+          <Button variant="outline" type="button" onClick={() => router.push(`/dashboard/invoices/${params.id}`)}>
             Cancel
           </Button>
-          <Button type="submit" className="min-w-[120px]" disabled={isSubmitting}>
-            {isSubmitting ? 'Creating...' : 'Create Invoice'}
+          <Button type="submit" className="min-w-[120px]">
+            Update Invoice
           </Button>
         </div>
       </form>
-
-      {/* Success/Error Modal */}
-      {showModal && (
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
-          <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
-            <div className="mt-3 text-center">
-              <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full mb-4">
-                {modalType === 'success' ? (
-                  <CheckCircleIcon className="h-12 w-12 text-green-500" />
-                ) : (
-                  <XCircleIcon className="h-12 w-12 text-red-500" />
-                )}
-              </div>
-              <h3 className={`text-lg font-medium ${modalType === 'success' ? 'text-gray-900' : 'text-red-900'}`}>
-                {modalType === 'success' ? 'Success!' : 'Error!'}
-              </h3>
-              <div className="mt-2 px-7 py-3">
-                <p className={`text-sm ${modalType === 'success' ? 'text-gray-500' : 'text-red-500'}`}>
-                  {modalMessage}
-                </p>
-              </div>
-              <div className="items-center px-4 py-3">
-                <Button
-                  onClick={handleModalClose}
-                  className={`w-full ${
-                    modalType === 'success' 
-                      ? 'bg-green-500 hover:bg-green-600 text-white' 
-                      : 'bg-red-500 hover:bg-red-600 text-white'
-                  }`}
-                >
-                  {modalType === 'success' ? 'Continue' : 'Try Again'}
-                </Button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

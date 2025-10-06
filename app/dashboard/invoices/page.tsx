@@ -15,7 +15,8 @@ import {
   PencilIcon,
   TrashIcon,
   ArrowUpTrayIcon,
-  PaperAirplaneIcon
+  PaperAirplaneIcon,
+  XCircleIcon
 } from '@heroicons/react/24/outline';
 
 interface InvoiceItem {
@@ -54,6 +55,7 @@ interface Invoice {
   totalAmount: string;
   status: 'pending' | 'valid' | 'invalid' | 'submitted' | 'failed' | 'draft';
   fbrInvoiceNumber?: string;
+  error?: string;
   createdAt: string;
   updatedAt: string;
   items: InvoiceItem[];
@@ -69,6 +71,13 @@ export default function InvoicesPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
   const [isUploading, setIsUploading] = useState(false);
+  const [showModal, setShowModal] = useState(false);
+  const [modalType, setModalType] = useState<'success' | 'error'>('success');
+  const [modalMessage, setModalMessage] = useState('');
+  const [postingInvoice, setPostingInvoice] = useState<number | null>(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteInvoiceId, setDeleteInvoiceId] = useState<number | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   console.log('InvoicesPage rendered - User:', user, 'AuthLoading:', authLoading);
 
@@ -101,6 +110,7 @@ export default function InvoicesPage() {
         
         if (response.ok) {
           const data = await response.json();
+          console.log('Invoice API Response:', data); // Debug log
           if (data.success && data.data) {
             setInvoices(data.data);
             setFilteredInvoices(data.data);
@@ -201,11 +211,16 @@ export default function InvoicesPage() {
 
   // Handle posting invoice to FBR
   const handlePostInvoice = async (invoiceId: number) => {
+    setPostingInvoice(invoiceId);
+    
     try {
       const token = localStorage.getItem('authToken') || localStorage.getItem('token');
       
       if (!token) {
-        alert('No authorization token found. Please login again.');
+        setModalType('error');
+        setModalMessage('No authorization token found. Please login again.');
+        setShowModal(true);
+        setPostingInvoice(null);
         return;
       }
 
@@ -224,17 +239,100 @@ export default function InvoicesPage() {
       const data = await response.json();
 
       if (response.ok && data.success) {
-        alert('Invoice posted successfully!');
-        // Refresh the invoice list
-        window.location.reload();
+        setModalType('success');
+        setModalMessage('Invoice posted successfully to FBR!');
+        setShowModal(true);
       } else {
-        const errorMessage = data.message || data.error || 'Failed to post invoice';
-        alert(`Failed to post invoice: ${errorMessage}`);
+        let errorMessage = data.message || data.error || 'Failed to post invoice';
+        
+        // Check if there's detailed FBR error information
+        if (data.data && Array.isArray(data.data) && data.data.length > 0) {
+          const firstError = data.data[0];
+          if (firstError.fbrResponse && firstError.fbrResponse.validationResponse) {
+            const fbrError = firstError.fbrResponse.validationResponse;
+            errorMessage = `FBR Validation Error:\n\nError Code: ${fbrError.errorCode}\nError: ${fbrError.error}\nStatus: ${fbrError.status}`;
+          }
+        }
+        
+        setModalType('error');
+        setModalMessage(`Failed to post invoice: ${errorMessage}`);
+        setShowModal(true);
       }
     } catch (error) {
       console.error('Error posting invoice:', error);
-      alert('Error posting invoice. Please try again.');
+      setModalType('error');
+      setModalMessage('Error posting invoice. Please try again.');
+      setShowModal(true);
+    } finally {
+      setPostingInvoice(null);
     }
+  };
+
+  const handleModalClose = () => {
+    setShowModal(false);
+    // Refresh the page only when user closes the success modal
+    if (modalType === 'success') {
+      window.location.reload();
+    }
+  };
+
+  const handleDeleteClick = (invoiceId: number) => {
+    setDeleteInvoiceId(invoiceId);
+    setShowDeleteModal(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!deleteInvoiceId) return;
+
+    setIsDeleting(true);
+    
+    try {
+      const token = localStorage.getItem('authToken') || localStorage.getItem('token');
+      
+      if (!token) {
+        setModalType('error');
+        setModalMessage('No authorization token found. Please login again.');
+        setShowModal(true);
+        setIsDeleting(false);
+        return;
+      }
+
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
+      const response = await fetch(`${apiUrl}/invoice/${deleteInvoiceId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        setModalType('success');
+        setModalMessage('Invoice deleted successfully!');
+        setShowModal(true);
+        setShowDeleteModal(false);
+        setDeleteInvoiceId(null);
+        // Don't refresh immediately - let user close modal first
+      } else {
+        const errorMessage = data.message || data.error || 'Failed to delete invoice';
+        setModalType('error');
+        setModalMessage(`Failed to delete invoice: ${errorMessage}`);
+        setShowModal(true);
+      }
+    } catch (error) {
+      console.error('Error deleting invoice:', error);
+      setModalType('error');
+      setModalMessage('Error deleting invoice. Please try again.');
+      setShowModal(true);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleDeleteCancel = () => {
+    setShowDeleteModal(false);
+    setDeleteInvoiceId(null);
   };
 
   // Handle Excel file upload
@@ -418,31 +516,31 @@ export default function InvoicesPage() {
       {/* Invoices table */}
       <div className="bg-white shadow rounded-lg overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
+          <table className="w-full divide-y divide-gray-200 table-fixed">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="w-48 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Invoice
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="w-40 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Buyer
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="w-24 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Status
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="w-28 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Amount
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="w-24 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Date
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="w-32 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   FBR Invoice #
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="w-24 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Registration
                 </th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="w-24 px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Actions
                 </th>
               </tr>
@@ -450,38 +548,37 @@ export default function InvoicesPage() {
             <tbody className="bg-white divide-y divide-gray-200">
               {currentInvoices.map((invoice) => (
                 <tr key={invoice.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900">{invoice.invoiceRefNo}</div>
-                    <div className="text-sm text-gray-500">{invoice.invoiceType}</div>
+                  <td className="px-4 py-3">
+                    <div className="text-sm font-medium text-gray-900 truncate">{invoice.invoiceRefNo}</div>
+                    <div className="text-xs text-gray-500 truncate">{invoice.invoiceType}</div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">{invoice.buyerBusinessName}</div>
-                    <div className="text-sm text-gray-500">NTN: {invoice.buyerNTNCNIC}</div>
-                    <div className="text-sm text-gray-500">{invoice.buyerProvince}</div>
+                  <td className="px-4 py-3">
+                    <div className="text-sm text-gray-900 truncate">{invoice.buyerBusinessName}</div>
+                    <div className="text-xs text-gray-500 truncate">NTN: {invoice.buyerNTNCNIC}</div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-4 py-3">
                     {getStatusBadge(invoice.status)}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-4 py-3">
                     <div className="text-sm text-gray-900">{formatCurrency(invoice.totalAmount)}</div>
-                    <div className="text-sm text-gray-500">
-                      Items: {invoice.items.length}
+                    <div className="text-xs text-gray-500">
+                      {invoice.items.length} items
                     </div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  <td className="px-4 py-3 text-sm text-gray-900">
                     {formatDate(invoice.invoiceDate)}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">
+                  <td className="px-4 py-3">
+                    <div className="text-sm text-gray-900 truncate">
                       {invoice.fbrInvoiceNumber || '-'}
                     </div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-500">
+                  <td className="px-4 py-3">
+                    <div className="text-xs text-gray-500 truncate">
                       {invoice.buyerRegistrationType}
                     </div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                  <td className="px-4 py-3 text-right text-sm font-medium">
                     <div className="flex items-center justify-end space-x-2">
                       <Link
                         href={`/dashboard/invoices/${invoice.id}`}
@@ -502,10 +599,18 @@ export default function InvoicesPage() {
                       {isSeller && (invoice.status === 'valid' || invoice.status === 'pending' || invoice.status === 'invalid') && (
                         <button
                           onClick={() => handlePostInvoice(invoice.id)}
-                          className="text-green-600 hover:text-green-900 p-1"
-                          title="Post to FBR"
+                          disabled={postingInvoice === invoice.id}
+                          className={`p-1 ${postingInvoice === invoice.id 
+                            ? 'text-gray-400 cursor-not-allowed' 
+                            : 'text-green-600 hover:text-green-900'
+                          }`}
+                          title={postingInvoice === invoice.id ? "Posting to FBR..." : "Post to FBR"}
                         >
-                          <PaperAirplaneIcon className="h-4 w-4" />
+                          {postingInvoice === invoice.id ? (
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-400"></div>
+                          ) : (
+                            <PaperAirplaneIcon className="h-4 w-4" />
+                          )}
                         </button>
                       )}
                       {invoice.status === 'failed' && (
@@ -516,8 +621,9 @@ export default function InvoicesPage() {
                           <ArrowUpTrayIcon className="h-4 w-4" />
                         </button>
                       )}
-                      {invoice.status === 'draft' && (
+                      {(invoice.status === 'draft' || invoice.status === 'invalid' || invoice.status === 'pending') && (
                         <button
+                          onClick={() => handleDeleteClick(invoice.id)}
                           className="text-red-600 hover:text-red-900 p-1"
                           title="Delete"
                         >
@@ -594,6 +700,87 @@ export default function InvoicesPage() {
           </div>
         )}
       </div>
+
+      {/* Success/Error Modal */}
+      {showModal && (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+          <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+            <div className="mt-3 text-center">
+              <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full mb-4">
+                {modalType === 'success' ? (
+                  <CheckCircleIcon className="h-12 w-12 text-green-500" />
+                ) : (
+                  <XCircleIcon className="h-12 w-12 text-red-500" />
+                )}
+              </div>
+              <h3 className={`text-lg font-medium ${modalType === 'success' ? 'text-gray-900' : 'text-red-900'}`}>
+                {modalType === 'success' ? 'Success!' : 'Error!'}
+              </h3>
+              <div className="mt-2 px-7 py-3">
+                <div className={`text-sm ${modalType === 'success' ? 'text-gray-500' : 'text-red-500'} whitespace-pre-line`}>
+                  {modalMessage}
+                </div>
+              </div>
+              <div className="items-center px-4 py-3">
+                <button
+                  onClick={handleModalClose}
+                  className={`w-full px-4 py-2 rounded-md text-white font-medium ${
+                    modalType === 'success' 
+                      ? 'bg-green-500 hover:bg-green-600' 
+                      : 'bg-red-500 hover:bg-red-600'
+                  }`}
+                >
+                  {modalType === 'success' ? 'Continue' : 'Try Again'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+          <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+            <div className="mt-3 text-center">
+              <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full mb-4">
+                <XCircleIcon className="h-12 w-12 text-red-500" />
+              </div>
+              <h3 className="text-lg font-medium text-red-900">
+                Delete Invoice
+              </h3>
+              <div className="mt-2 px-7 py-3">
+                <p className="text-sm text-red-500">
+                  Are you sure you want to delete this invoice? This action cannot be undone.
+                </p>
+              </div>
+              <div className="items-center px-4 py-3 flex space-x-3">
+                <button
+                  onClick={handleDeleteCancel}
+                  disabled={isDeleting}
+                  className="flex-1 px-4 py-2 rounded-md text-gray-700 bg-gray-200 hover:bg-gray-300 font-medium disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleDeleteConfirm}
+                  disabled={isDeleting}
+                  className="flex-1 px-4 py-2 rounded-md text-white bg-red-500 hover:bg-red-600 font-medium disabled:opacity-50 flex items-center justify-center"
+                >
+                  {isDeleting ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      Deleting...
+                    </>
+                  ) : (
+                    'Delete'
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
-import { PrinterIcon, PaperAirplaneIcon } from '@heroicons/react/24/outline'
+import { PrinterIcon, PaperAirplaneIcon, CheckCircleIcon, XCircleIcon } from '@heroicons/react/24/outline'
 import { useAuth } from '@/lib/auth-context'
 import InvoicePrint from '@/app/components/invoice-print'
 
@@ -174,6 +174,10 @@ export default function InvoiceViewPage({ params }: { params: { id: string } }) 
   const [layout, setLayout] = useState<SectionKey[]>(['seller', 'buyer', 'products', 'tax'])
   const [visibility, setVisibility] = useState<FieldVisibility>(defaultFieldVisibility())
   const [showCustomizer, setShowCustomizer] = useState(false)
+  const [showModal, setShowModal] = useState(false)
+  const [modalType, setModalType] = useState<'success' | 'error'>('success')
+  const [modalMessage, setModalMessage] = useState('')
+  const [isPosting, setIsPosting] = useState(false)
   const { user } = useAuth()
 
   // Check if user is a seller
@@ -186,11 +190,16 @@ export default function InvoiceViewPage({ params }: { params: { id: string } }) 
   const handlePostInvoice = async () => {
     if (!invoice) return;
     
+    setIsPosting(true);
+    
     try {
       const token = localStorage.getItem('authToken') || localStorage.getItem('token');
       
       if (!token) {
-        alert('No authorization token found. Please login again.');
+        setModalType('error');
+        setModalMessage('No authorization token found. Please login again.');
+        setShowModal(true);
+        setIsPosting(false);
         return;
       }
 
@@ -209,16 +218,40 @@ export default function InvoiceViewPage({ params }: { params: { id: string } }) 
       const data = await response.json();
 
       if (response.ok && data.success) {
-        alert('Invoice posted successfully!');
-        // Refresh the page to show updated status
-        window.location.reload();
+        setModalType('success');
+        setModalMessage('Invoice posted successfully to FBR!');
+        setShowModal(true);
       } else {
-        const errorMessage = data.message || data.error || 'Failed to post invoice';
-        alert(`Failed to post invoice: ${errorMessage}`);
+        let errorMessage = data.message || data.error || 'Failed to post invoice';
+        
+        // Check if there's detailed FBR error information
+        if (data.data && Array.isArray(data.data) && data.data.length > 0) {
+          const firstError = data.data[0];
+          if (firstError.fbrResponse && firstError.fbrResponse.validationResponse) {
+            const fbrError = firstError.fbrResponse.validationResponse;
+            errorMessage = `FBR Validation Error:\n\nError Code: ${fbrError.errorCode}\nError: ${fbrError.error}\nStatus: ${fbrError.status}`;
+          }
+        }
+        
+        setModalType('error');
+        setModalMessage(`Failed to post invoice: ${errorMessage}`);
+        setShowModal(true);
       }
     } catch (error) {
       console.error('Error posting invoice:', error);
-      alert('Error posting invoice. Please try again.');
+      setModalType('error');
+      setModalMessage('Error posting invoice. Please try again.');
+      setShowModal(true);
+    } finally {
+      setIsPosting(false);
+    }
+  };
+
+  const handleModalClose = () => {
+    setShowModal(false);
+    // Refresh the page only when user closes the success modal
+    if (modalType === 'success') {
+      window.location.reload();
     }
   };
 
@@ -802,14 +835,23 @@ export default function InvoiceViewPage({ params }: { params: { id: string } }) 
           )}
         </div>
         <div className="mt-4 sm:mt-0 space-x-3 no-print">
-          {isSeller && (invoice.status === 'valid' || invoice.status === 'pending') && (
+          {isSeller && (invoice.status === 'valid' || invoice.status === 'pending' || invoice.status === 'invalid') && (
             <button
               onClick={handlePostInvoice}
-              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
-              title="Post this invoice to FBR (only available for sellers and valid/pending invoices)"
+              disabled={isPosting}
+              className={`inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 ${
+                isPosting 
+                  ? 'bg-gray-400 cursor-not-allowed' 
+                  : 'bg-green-600 hover:bg-green-700'
+              }`}
+              title={isPosting ? "Posting to FBR..." : "Post this invoice to FBR (only available for sellers and valid/pending invoices)"}
             >
-              <PaperAirplaneIcon className="h-4 w-4 mr-2" />
-              Post to FBR
+              {isPosting ? (
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+              ) : (
+                <PaperAirplaneIcon className="h-4 w-4 mr-2" />
+              )}
+              {isPosting ? 'Posting...' : 'Post to FBR'}
             </button>
           )}
           {isSeller && isSubmitted && (
@@ -1050,6 +1092,43 @@ export default function InvoiceViewPage({ params }: { params: { id: string } }) 
           })()}
         </div>
       </div>
+
+      {/* Success/Error Modal */}
+      {showModal && (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+          <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+            <div className="mt-3 text-center">
+              <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full mb-4">
+                {modalType === 'success' ? (
+                  <CheckCircleIcon className="h-12 w-12 text-green-500" />
+                ) : (
+                  <XCircleIcon className="h-12 w-12 text-red-500" />
+                )}
+              </div>
+              <h3 className={`text-lg font-medium ${modalType === 'success' ? 'text-gray-900' : 'text-red-900'}`}>
+                {modalType === 'success' ? 'Success!' : 'Error!'}
+              </h3>
+              <div className="mt-2 px-7 py-3">
+                <div className={`text-sm ${modalType === 'success' ? 'text-gray-500' : 'text-red-500'} whitespace-pre-line`}>
+                  {modalMessage}
+                </div>
+              </div>
+              <div className="items-center px-4 py-3">
+                <button
+                  onClick={handleModalClose}
+                  className={`w-full px-4 py-2 rounded-md text-white font-medium ${
+                    modalType === 'success' 
+                      ? 'bg-green-500 hover:bg-green-600' 
+                      : 'bg-red-500 hover:bg-red-600'
+                  }`}
+                >
+                  {modalType === 'success' ? 'Continue' : 'Try Again'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

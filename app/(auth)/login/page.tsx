@@ -96,15 +96,6 @@ export default function LoginPage() {
                   {loading ? 'Signing in...' : 'Sign in'}
                 </Button>
               </form>
-
-              {/* Development Note */}
-              <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
-                <p className="text-xs text-blue-700">
-                  <strong>Development Mode:</strong> Use these credentials to access the demo:
-                  <br />
-                  <strong>Email:</strong> fahadiqbal@gmail.com | <strong>Password:</strong> [your password]
-                </p>
-              </div>
             </CardContent>
           </Card>
         </div>

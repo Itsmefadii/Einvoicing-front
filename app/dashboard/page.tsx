@@ -13,17 +13,55 @@ import {
   ChartBarIcon,
   PlusIcon,
   ArrowUpIcon,
-  ArrowDownIcon
+  ArrowDownIcon,
+  UsersIcon
 } from '@heroicons/react/24/outline';
+import { useAuth } from '@/lib/auth-context';
+
+// Custom hook for counting animation
+function useCountUp(end: number, duration: number = 2000, start: number = 0) {
+  const [count, setCount] = useState(start);
+  const [isAnimating, setIsAnimating] = useState(false);
+
+  useEffect(() => {
+    if (end === start) return;
+    
+    setIsAnimating(true);
+    const startTime = Date.now();
+    const difference = end - start;
+    
+    const timer = setInterval(() => {
+      const elapsed = Date.now() - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      
+      // Easing function for smooth animation
+      const easeOutQuart = 1 - Math.pow(1 - progress, 4);
+      const currentCount = Math.floor(start + (difference * easeOutQuart));
+      
+      setCount(currentCount);
+      
+      if (progress >= 1) {
+        setCount(end);
+        setIsAnimating(false);
+        clearInterval(timer);
+      }
+    }, 16); // ~60fps
+    
+    return () => clearInterval(timer);
+  }, [end, duration, start]);
+
+  return { count, isAnimating };
+}
 
 interface DashboardStats {
   totalInvoices: number;
-  totalSellers: number;
-  issuedInvoices: number;
-  pendingInvoices: number;
-  failedInvoices: number;
+  totalUsers: number;
   totalRevenue: number;
-  monthlyGrowth: number;
+  successRate: number;
+  pendingInvoices: number;
+  submittedInvoices: number;
+  invalidInvoices: number;
+  validInvoices: number;
 }
 
 interface RecentActivity {
@@ -37,16 +75,31 @@ interface RecentActivity {
 export default function DashboardPage() {
   const searchParams = useSearchParams();
   const [showAccessDenied, setShowAccessDenied] = useState(false);
+  const { user } = useAuth();
+
+  // Check if user is a seller
+  const isSeller = user?.sellerId !== null || user?.sellerData !== undefined;
 
   const [stats, setStats] = useState<DashboardStats>({
-    totalInvoices: 1247,
-    totalSellers: 23,
-    issuedInvoices: 892,
-    pendingInvoices: 156,
-    failedInvoices: 45,
-    totalRevenue: 1542000,
-    monthlyGrowth: 12.5,
+    totalInvoices: 0,
+    totalUsers: 0,
+    totalRevenue: 0,
+    successRate: 0,
+    pendingInvoices: 0,
+    submittedInvoices: 0,
+    invalidInvoices: 0,
+    validInvoices: 0,
   });
+
+  // Animated counters
+  const totalInvoicesCount = useCountUp(stats.totalInvoices, 3500, 0);
+  const totalUsersCount = useCountUp(stats.totalUsers, 3500, 0);
+  const totalRevenueCount = useCountUp(stats.totalRevenue, 3500, 0);
+  const successRateCount = useCountUp(stats.successRate, 3500, 0);
+  const pendingInvoicesCount = useCountUp(stats.pendingInvoices, 3500, 0);
+  const submittedInvoicesCount = useCountUp(stats.submittedInvoices, 3500, 0);
+  const invalidInvoicesCount = useCountUp(stats.invalidInvoices, 3500, 0);
+  const validInvoicesCount = useCountUp(stats.validInvoices, 3500, 0);
 
   const [recentActivity, setRecentActivity] = useState<RecentActivity[]>([
     {
@@ -94,12 +147,37 @@ export default function DashboardPage() {
       setShowAccessDenied(true);
     }
 
-    // Simulate loading
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 1000);
+    // Fetch dashboard stats
+    const fetchDashboardStats = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) {
+          setIsLoading(false);
+          return;
+        }
 
-    return () => clearTimeout(timer);
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/invoice/dashboard/stats`, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success && data.data) {
+            setStats(data.data);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching dashboard stats:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchDashboardStats();
   }, [searchParams]);
 
   const formatCurrency = (amount: number) => {
@@ -206,7 +284,7 @@ export default function DashboardPage() {
               <div className="ml-5 w-0 flex-1">
                 <dl>
                   <dt className="text-sm font-medium text-gray-500 truncate">Total Invoices</dt>
-                  <dd className="text-lg font-medium text-gray-900">{stats.totalInvoices.toLocaleString()}</dd>
+                  <dd className="text-lg font-medium text-gray-900">{totalInvoicesCount.count.toLocaleString()}</dd>
                 </dl>
               </div>
             </div>
@@ -220,17 +298,25 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Total Sellers */}
+        {/* Total Sellers / Number of Users */}
         <div className="bg-white overflow-hidden shadow rounded-lg">
           <div className="p-5">
             <div className="flex items-center">
               <div className="flex-shrink-0">
-                <BuildingOfficeIcon className="h-6 w-6 text-gray-400" />
+                {isSeller ? (
+                  <UsersIcon className="h-6 w-6 text-gray-400" />
+                ) : (
+                  <BuildingOfficeIcon className="h-6 w-6 text-gray-400" />
+                )}
               </div>
               <div className="ml-5 w-0 flex-1">
                 <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">Active Sellers</dt>
-                  <dd className="text-lg font-medium text-gray-900">{stats.totalSellers}</dd>
+                  <dt className="text-sm font-medium text-gray-500 truncate">
+                    {isSeller ? 'Number of users' : 'Active Sellers'}
+                  </dt>
+                  <dd className="text-lg font-medium text-gray-900">
+                    {isSeller ? totalUsersCount.count : totalUsersCount.count}
+                  </dd>
                 </dl>
               </div>
             </div>
@@ -238,7 +324,7 @@ export default function DashboardPage() {
           <div className="bg-gray-50 px-5 py-3">
             <div className="text-sm">
               <Link href="/dashboard/sellers" className="font-medium text-blue-700 hover:text-blue-900">
-                Manage sellers
+                {isSeller ? 'View users' : 'Manage sellers'}
               </Link>
             </div>
           </div>
@@ -254,7 +340,7 @@ export default function DashboardPage() {
               <div className="ml-5 w-0 flex-1">
                 <dl>
                   <dt className="text-sm font-medium text-gray-500 truncate">Total Revenue</dt>
-                  <dd className="text-lg font-medium text-gray-900">{formatCurrency(stats.totalRevenue)}</dd>
+                  <dd className="text-lg font-medium text-gray-900">{formatCurrency(totalRevenueCount.count)}</dd>
                 </dl>
               </div>
             </div>
@@ -281,7 +367,7 @@ export default function DashboardPage() {
                 <dl>
                   <dt className="text-sm font-medium text-gray-500 truncate">Success Rate</dt>
                   <dd className="text-lg font-medium text-gray-900">
-                    {Math.round((stats.issuedInvoices / stats.totalInvoices) * 100)}%
+                    {successRateCount.count}%
                   </dd>
                 </dl>
               </div>
@@ -289,7 +375,7 @@ export default function DashboardPage() {
           </div>
           <div className="bg-gray-50 px-5 py-3">
             <div className="text-sm text-gray-500">
-              {stats.issuedInvoices} of {stats.totalInvoices} successful
+              {submittedInvoicesCount.count} of {totalInvoicesCount.count} successful
             </div>
           </div>
         </div>
@@ -301,37 +387,37 @@ export default function DashboardPage() {
           <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">Invoice Status Overview</h3>
           <div className="grid grid-cols-1 gap-5 sm:grid-cols-3">
             <div className="text-center">
-              <div className="text-2xl font-bold text-green-600">{stats.issuedInvoices}</div>
-              <div className="text-sm text-gray-500">Issued</div>
+              <div className="text-2xl font-bold text-green-600">{submittedInvoicesCount.count}</div>
+              <div className="text-sm text-gray-500">Submitted</div>
               <div className="mt-2">
                 <div className="bg-green-200 rounded-full h-2">
                   <div 
-                    className="bg-green-600 h-2 rounded-full" 
-                    style={{ width: `${(stats.issuedInvoices / stats.totalInvoices) * 100}%` }}
+                    className="bg-green-600 h-2 rounded-full transition-all duration-1500 ease-out" 
+                    style={{ width: `${totalInvoicesCount.count > 0 ? (submittedInvoicesCount.count / totalInvoicesCount.count) * 100 : 0}%` }}
                   ></div>
                 </div>
               </div>
             </div>
             <div className="text-center">
-              <div className="text-2xl font-bold text-yellow-600">{stats.pendingInvoices}</div>
+              <div className="text-2xl font-bold text-yellow-600">{pendingInvoicesCount.count}</div>
               <div className="text-sm text-gray-500">Pending</div>
               <div className="mt-2">
                 <div className="bg-yellow-200 rounded-full h-2">
                   <div 
-                    className="bg-yellow-600 h-2 rounded-full" 
-                    style={{ width: `${(stats.pendingInvoices / stats.totalInvoices) * 100}%` }}
+                    className="bg-yellow-600 h-2 rounded-full transition-all duration-1500 ease-out" 
+                    style={{ width: `${totalInvoicesCount.count > 0 ? (pendingInvoicesCount.count / totalInvoicesCount.count) * 100 : 0}%` }}
                   ></div>
                 </div>
               </div>
             </div>
             <div className="text-center">
-              <div className="text-2xl font-bold text-red-600">{stats.failedInvoices}</div>
-              <div className="text-sm text-gray-500">Failed</div>
+              <div className="text-2xl font-bold text-red-600">{invalidInvoicesCount.count}</div>
+              <div className="text-sm text-gray-500">Invalid</div>
               <div className="mt-2">
                 <div className="bg-red-200 rounded-full h-2">
                   <div 
-                    className="bg-red-600 h-2 rounded-full" 
-                    style={{ width: `${(stats.failedInvoices / stats.totalInvoices) * 100}%` }}
+                    className="bg-red-600 h-2 rounded-full transition-all duration-1500 ease-out" 
+                    style={{ width: `${totalInvoicesCount.count > 0 ? (invalidInvoicesCount.count / totalInvoicesCount.count) * 100 : 0}%` }}
                   ></div>
                 </div>
               </div>
@@ -346,97 +432,100 @@ export default function DashboardPage() {
         <div className="bg-white shadow rounded-lg">
           <div className="px-4 py-5 sm:p-6">
             <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">Quick Actions</h3>
-            <div className="space-y-3">
+            <div className="grid grid-cols-1 gap-5 sm:grid-cols-3">
               <Link
                 href="/dashboard/invoices/create"
-                className="flex items-center p-3 text-sm font-medium text-gray-700 bg-gray-50 rounded-md hover:bg-gray-100 transition-colors"
+                className="text-center p-4 rounded-lg hover:bg-gray-50 transition-colors"
               >
-                <PlusIcon className="h-5 w-5 text-blue-500 mr-3" />
-                Create New Invoice
+                <div className="flex justify-center mb-2">
+                  <PlusIcon className="h-8 w-8 text-blue-500" />
+                </div>
+                <div className="text-sm font-medium text-gray-900">Create New Invoice</div>
               </Link>
               <Link
                 href="/dashboard/invoices/upload"
-                className="flex items-center p-3 text-sm font-medium text-gray-700 bg-gray-50 rounded-md hover:bg-gray-100 transition-colors"
+                className="text-center p-4 rounded-lg hover:bg-gray-50 transition-colors"
               >
-                <DocumentTextIcon className="h-5 w-5 text-green-500 mr-3" />
-                Upload Excel File
+                <div className="flex justify-center mb-2">
+                  <DocumentTextIcon className="h-8 w-8 text-green-500" />
+                </div>
+                <div className="text-sm font-medium text-gray-900">Upload Excel File</div>
               </Link>
               <Link
                 href="/dashboard/sellers"
-                className="flex items-center p-3 text-sm font-medium text-gray-700 bg-gray-50 rounded-md hover:bg-gray-100 transition-colors"
+                className="text-center p-4 rounded-lg hover:bg-gray-50 transition-colors"
               >
-                <BuildingOfficeIcon className="h-5 w-5 text-purple-500 mr-3" />
-                Manage Sellers
-              </Link>
-              <Link
-                href="/dashboard/fbr"
-                className="flex items-center p-3 text-sm font-medium text-gray-700 bg-gray-50 rounded-md hover:bg-gray-100 transition-colors"
-              >
-                <BuildingOfficeIcon className="h-5 w-5 text-indigo-500 mr-3" />
-                FBR Integration Status
+                <div className="flex justify-center mb-2">
+                  <BuildingOfficeIcon className="h-8 w-8 text-purple-500" />
+                </div>
+                <div className="text-sm font-medium text-gray-900">Manage Sellers</div>
               </Link>
             </div>
           </div>
         </div>
 
-        {/* Recent Activity */}
-        <div className="bg-white shadow rounded-lg">
-          <div className="px-4 py-5 sm:p-6">
-            <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">Recent Activity</h3>
-            <div className="space-y-4">
-              {recentActivity.map((activity) => (
-                <div key={activity.id} className="flex items-start space-x-3">
-                  <div className="flex-shrink-0 mt-1">
-                    {getActivityIcon(activity.type)}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm text-gray-900">{activity.message}</p>
-                    <div className="flex items-center mt-1">
-                      <span className="text-xs text-gray-500">{activity.timestamp}</span>
-                      <div className="ml-2">
-                        {getStatusIcon(activity.status)}
+        {/* Recent Activity - Only for Admins */}
+        {!isSeller && (
+          <div className="bg-white shadow rounded-lg">
+            <div className="px-4 py-5 sm:p-6">
+              <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">Recent Activity</h3>
+              <div className="space-y-4">
+                {recentActivity.map((activity) => (
+                  <div key={activity.id} className="flex items-start space-x-3">
+                    <div className="flex-shrink-0 mt-1">
+                      {getActivityIcon(activity.type)}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm text-gray-900">{activity.message}</p>
+                      <div className="flex items-center mt-1">
+                        <span className="text-xs text-gray-500">{activity.timestamp}</span>
+                        <div className="ml-2">
+                          {getStatusIcon(activity.status)}
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              ))}
-            </div>
-            <div className="mt-4">
-              <Link
-                href="/dashboard/audit-logs"
-                className="text-sm font-medium text-blue-700 hover:text-blue-900"
-              >
-                View all activity →
-              </Link>
+                ))}
+              </div>
+              <div className="mt-4">
+                <Link
+                  href="/dashboard/audit-logs"
+                  className="text-sm font-medium text-blue-700 hover:text-blue-900"
+                >
+                  View all activity →
+                </Link>
+              </div>
             </div>
           </div>
-        </div>
+        )}
       </div>
 
-      {/* System Health */}
-      <div className="bg-white shadow rounded-lg">
-        <div className="px-4 py-5 sm:p-6">
-          <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">System Health</h3>
-          <div className="grid grid-cols-1 gap-5 sm:grid-cols-4">
-            <div className="text-center">
-              <div className="text-2xl font-bold text-green-600">99.9%</div>
-              <div className="text-sm text-gray-500">Uptime</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-green-600">2.3s</div>
-              <div className="text-sm text-gray-500">Avg Response</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-green-600">Active</div>
-              <div className="text-sm text-gray-500">FBR Connection</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-green-600">0</div>
-              <div className="text-sm text-gray-500">Failed Jobs</div>
+      {/* System Health - Only for Admins */}
+      {!isSeller && (
+        <div className="bg-white shadow rounded-lg">
+          <div className="px-4 py-5 sm:p-6">
+            <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">System Health</h3>
+            <div className="grid grid-cols-1 gap-5 sm:grid-cols-4">
+              <div className="text-center">
+                <div className="text-2xl font-bold text-green-600">99.9%</div>
+                <div className="text-sm text-gray-500">Uptime</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-green-600">2.3s</div>
+                <div className="text-sm text-gray-500">Avg Response</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-green-600">Active</div>
+                <div className="text-sm text-gray-500">FBR Connection</div>
+              </div>
+              <div className="text-center">
+                <div className="text-2xl font-bold text-green-600">0</div>
+                <div className="text-sm text-gray-500">Failed Jobs</div>
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

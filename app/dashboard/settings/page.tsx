@@ -1,12 +1,15 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   UserCircleIcon, 
   Cog6ToothIcon,
   BellIcon,
   ShieldCheckIcon,
-  KeyIcon
+  KeyIcon,
+  CloudIcon,
+  ExclamationTriangleIcon,
+  CheckCircleIcon
 } from '@heroicons/react/24/outline';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/app/components/ui/card';
 import { Button } from '@/app/components/ui/button';
@@ -15,16 +18,130 @@ import { useAuth } from '@/lib/auth-context';
 import { LogoutButton } from '@/components/auth/logout-button';
 
 export default function SettingsPage() {
-  const [activeTab, setActiveTab] = useState('profile');
   const { user } = useAuth();
+  const isSeller = user?.roleId === 2; // Assuming roleId 2 is for sellers
+  const [activeTab, setActiveTab] = useState(isSeller ? 'environment' : 'profile');
+  const [environment, setEnvironment] = useState<'sandbox' | 'production'>('sandbox');
+  const [isChangingEnvironment, setIsChangingEnvironment] = useState(false);
+  const [showEnvironmentModal, setShowEnvironmentModal] = useState(false);
+  const [selectedEnvironment, setSelectedEnvironment] = useState<'sandbox' | 'production'>('sandbox');
 
-  const tabs = [
+  // Define tabs based on user role
+  const allTabs = [
     { id: 'profile', name: 'Profile', icon: UserCircleIcon },
     { id: 'preferences', name: 'Preferences', icon: Cog6ToothIcon },
+    { id: 'environment', name: 'Environment', icon: CloudIcon },
     { id: 'notifications', name: 'Notifications', icon: BellIcon },
     { id: 'security', name: 'Security', icon: ShieldCheckIcon },
     { id: 'api', name: 'API Keys', icon: KeyIcon }
   ];
+
+  // Filter tabs based on user role
+  const tabs = isSeller 
+    ? allTabs.filter(tab => ['environment', 'security', 'api'].includes(tab.id))
+    : allTabs;
+
+  // Load environment from fbrTokenType in user data
+  useEffect(() => {
+    // Determine environment based on fbrTokenType from user data
+    const userData = user?.sellerData;
+    if (userData?.fbrTokenType) {
+      const tokenType = userData.fbrTokenType.toLowerCase();
+      if (tokenType === 'production') {
+        setEnvironment('production');
+      } else if (tokenType === 'sandbox') {
+        setEnvironment('sandbox');
+      } else {
+        // Default to sandbox if fbrTokenType is not recognized
+        setEnvironment('sandbox');
+      }
+    } else {
+      // Default to sandbox if no fbrTokenType
+      setEnvironment('sandbox');
+    }
+  }, [user]);
+
+  // Update active tab when user changes
+  useEffect(() => {
+    if (isSeller) {
+      setActiveTab('environment');
+    } else {
+      setActiveTab('profile');
+    }
+  }, [isSeller]);
+
+  const handleEnvironmentChange = (newEnvironment: 'sandbox' | 'production') => {
+    setSelectedEnvironment(newEnvironment);
+    setShowEnvironmentModal(true);
+  };
+
+  const confirmEnvironmentChange = async () => {
+    setIsChangingEnvironment(true);
+    try {
+      // Call API to update environment
+      const token = localStorage.getItem('token');
+      const tokenType = selectedEnvironment === 'production' ? 'Production' : 'Sandbox';
+      
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/sellers/environment-change`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          tokenType: tokenType
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        
+        if (data.success) {
+          // Update FBR token and fbrTokenType based on selected environment
+          const userData = user?.sellerData;
+          if (userData) {
+            if (selectedEnvironment === 'production' && userData.fbrProdToken) {
+              localStorage.setItem('fbrToken', userData.fbrProdToken);
+              // Update fbrTokenType in user data
+              const updatedUser = { ...user };
+              if (updatedUser.sellerData) {
+                updatedUser.sellerData.fbrTokenType = 'Production';
+                localStorage.setItem('user', JSON.stringify(updatedUser));
+              }
+            } else if (selectedEnvironment === 'sandbox' && userData.fbrSandBoxToken) {
+              localStorage.setItem('fbrToken', userData.fbrSandBoxToken);
+              // Update fbrTokenType in user data
+              const updatedUser = { ...user };
+              if (updatedUser.sellerData) {
+                updatedUser.sellerData.fbrTokenType = 'Sandbox';
+                localStorage.setItem('user', JSON.stringify(updatedUser));
+              }
+            }
+          }
+          
+          setEnvironment(selectedEnvironment);
+          setShowEnvironmentModal(false);
+        } else {
+          console.error('API returned unsuccessful response:', data);
+          alert(`Failed to change environment: ${data.message || 'Unknown error'}`);
+        }
+      } else {
+        const errorData = await response.json();
+        console.error('API call failed:', errorData);
+        alert(`Failed to change environment: ${errorData.message || 'Network error'}`);
+      }
+    } catch (error) {
+      console.error('Error changing environment:', error);
+      alert('Failed to change environment. Please try again.');
+    } finally {
+      setIsChangingEnvironment(false);
+    }
+  };
+
+  const cancelEnvironmentChange = () => {
+    setShowEnvironmentModal(false);
+    setSelectedEnvironment(environment);
+  };
 
   return (
     <div className="space-y-6">
@@ -129,6 +246,241 @@ export default function SettingsPage() {
             </div>
           </CardContent>
         </Card>
+      )}
+
+      {activeTab === 'environment' && (
+        <div className="space-y-6">
+          {/* Current Environment Status */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <CloudIcon className="h-5 w-5" />
+                <span>Current Environment</span>
+              </CardTitle>
+              <CardDescription>Your current FBR integration environment</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                <div className="flex items-center space-x-3">
+                  <div className={`w-3 h-3 rounded-full ${
+                    environment === 'production' ? 'bg-red-500' : 'bg-yellow-500'
+                  }`}></div>
+                  <div>
+                    <p className="font-medium text-gray-900 capitalize">{environment} Environment</p>
+                    <p className="text-sm text-gray-600">
+                      {environment === 'production' 
+                        ? 'Live FBR integration - Real invoices will be submitted'
+                        : 'Test environment - Safe for testing and development'
+                      }
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center space-x-2">
+                  {environment === 'production' ? (
+                    <ExclamationTriangleIcon className="h-5 w-5 text-red-500" />
+                  ) : (
+                    <CheckCircleIcon className="h-5 w-5 text-green-500" />
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Environment Selection */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Switch Environment</CardTitle>
+              <CardDescription>Choose between sandbox and production environments</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Sandbox Environment */}
+                <div className={`border-2 rounded-lg p-4 cursor-pointer transition-all ${
+                  environment === 'sandbox' 
+                    ? 'border-green-500 bg-green-50' 
+                    : 'border-gray-200 hover:border-gray-300'
+                }`}>
+                  <div className="flex items-start space-x-3">
+                    <div className={`w-4 h-4 rounded-full mt-1 ${
+                      environment === 'sandbox' ? 'bg-green-500' : 'bg-gray-300'
+                    }`}></div>
+                    <div className="flex-1">
+                      <h3 className="font-medium text-gray-900">Sandbox Environment</h3>
+                      <p className="text-sm text-gray-600 mt-1">
+                        Safe testing environment for development and testing purposes.
+                      </p>
+                      <ul className="text-xs text-gray-500 mt-2 space-y-1">
+                        <li>• Test invoices without affecting real data</li>
+                        <li>• Safe for experimentation</li>
+                        <li>• No real FBR submissions</li>
+                      </ul>
+                      {environment === 'sandbox' && (
+                        <div className="mt-2 flex items-center text-green-600 text-sm">
+                          <CheckCircleIcon className="h-4 w-4 mr-1" />
+                          Currently Active
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  {environment !== 'sandbox' && (
+                    <div className="mt-4">
+                      <Button 
+                        onClick={() => handleEnvironmentChange('sandbox')}
+                        variant="outline"
+                        className="w-full"
+                      >
+                        Switch to Sandbox
+                      </Button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Production Environment */}
+                <div className={`border-2 rounded-lg p-4 cursor-pointer transition-all ${
+                  environment === 'production' 
+                    ? 'border-red-500 bg-red-50' 
+                    : 'border-gray-200 hover:border-gray-300'
+                }`}>
+                  <div className="flex items-start space-x-3">
+                    <div className={`w-4 h-4 rounded-full mt-1 ${
+                      environment === 'production' ? 'bg-red-500' : 'bg-gray-300'
+                    }`}></div>
+                    <div className="flex-1">
+                      <h3 className="font-medium text-gray-900">Production Environment</h3>
+                      <p className="text-sm text-gray-600 mt-1">
+                        Live environment for real invoice submissions to FBR.
+                      </p>
+                      <ul className="text-xs text-gray-500 mt-2 space-y-1">
+                        <li>• Real FBR invoice submissions</li>
+                        <li>• Live business transactions</li>
+                        <li>• Permanent data changes</li>
+                      </ul>
+                      {environment === 'production' && (
+                        <div className="mt-2 flex items-center text-red-600 text-sm">
+                          <ExclamationTriangleIcon className="h-4 w-4 mr-1" />
+                          Currently Active
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  {environment !== 'production' && (
+                    <div className="mt-4">
+                      <Button 
+                        onClick={() => handleEnvironmentChange('production')}
+                        variant="outline"
+                        className="w-full border-red-300 text-red-600 hover:bg-red-50"
+                      >
+                        Switch to Production
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Warning for Production */}
+              {environment === 'production' && (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                  <div className="flex items-start space-x-2">
+                    <ExclamationTriangleIcon className="h-5 w-5 text-red-500 mt-0.5 flex-shrink-0" />
+                    <div>
+                      <h4 className="font-medium text-red-800">Production Environment Active</h4>
+                      <p className="text-sm text-red-700 mt-1">
+                        You are currently using the production environment. All invoice submissions will be sent to FBR and cannot be undone. 
+                        Please ensure you have proper authorization and testing before switching to production.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Environment Details */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Environment Details</CardTitle>
+              <CardDescription>Technical information about your current environment</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Current Environment</label>
+                  <div className="flex items-center space-x-2">
+                    <div className={`w-2 h-2 rounded-full ${
+                      environment === 'production' ? 'bg-red-500' : 'bg-yellow-500'
+                    }`}></div>
+                    <span className="text-sm text-gray-900 capitalize">{environment}</span>
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">FBR Token Status</label>
+                  <div className="flex items-center space-x-2">
+                    <div className={`w-2 h-2 rounded-full ${
+                      user?.sellerData?.fbrSandBoxToken || user?.sellerData?.fbrProdToken ? 'bg-green-500' : 'bg-red-500'
+                    }`}></div>
+                    <span className="text-sm text-gray-900">
+                      {user?.sellerData?.fbrSandBoxToken || user?.sellerData?.fbrProdToken ? 'Configured' : 'Not Configured'}
+                    </span>
+                  </div>
+                  {user?.sellerData?.fbrTokenType && (
+                    <div className="mt-1">
+                      <span className="text-xs text-gray-500">
+                        Current Type: {user.sellerData.fbrTokenType}
+                      </span>
+                    </div>
+                  )}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">API Endpoint</label>
+                  <code className="text-xs bg-gray-100 px-2 py-1 rounded">
+                    {environment === 'production' 
+                      ? 'https://api.fbr.gov.pk/production' 
+                      : 'https://api.fbr.gov.pk/sandbox'
+                    }
+                  </code>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Last Updated</label>
+                  <span className="text-sm text-gray-900">
+                    {new Date().toLocaleDateString()}
+                  </span>
+                </div>
+              </div>
+              
+              {/* Current FBR Token Display */}
+              {user?.sellerData && (user.sellerData.fbrSandBoxToken || user.sellerData.fbrProdToken) && (
+                <div className="mt-6 pt-6 border-t border-gray-200">
+                  <h4 className="text-sm font-medium text-gray-900 mb-3">Current FBR Token</h4>
+                  <div className="bg-gray-50 p-3 rounded-lg">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs font-medium text-gray-600">
+                        {user.sellerData.fbrTokenType || (environment === 'production' ? 'Production Token' : 'Sandbox Token')}
+                      </span>
+                      <div className={`px-2 py-1 rounded-full text-xs ${
+                        (user.sellerData.fbrTokenType?.toLowerCase() === 'production' || environment === 'production')
+                          ? 'bg-red-100 text-red-800' 
+                          : 'bg-yellow-100 text-yellow-800'
+                      }`}>
+                        {user.sellerData.fbrTokenType?.toLowerCase() === 'production' || environment === 'production' ? 'LIVE' : 'TEST'}
+                      </div>
+                    </div>
+                    <code className="text-xs text-gray-700 break-all">
+                      {environment === 'production' 
+                        ? user.sellerData.fbrProdToken 
+                        : user.sellerData.fbrSandBoxToken
+                      }
+                    </code>
+                    {user.sellerData.fbrTokenType && (
+                      <div className="mt-2 text-xs text-gray-500">
+                        Token Type: {user.sellerData.fbrTokenType}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
       )}
 
       {activeTab === 'notifications' && (
@@ -237,6 +589,75 @@ export default function SettingsPage() {
             </div>
           </CardContent>
         </Card>
+      )}
+
+      {/* Environment Change Confirmation Modal */}
+      {showEnvironmentModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <div className="flex items-center space-x-3 mb-4">
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                selectedEnvironment === 'production' ? 'bg-red-100' : 'bg-yellow-100'
+              }`}>
+                <CloudIcon className={`h-5 w-5 ${
+                  selectedEnvironment === 'production' ? 'text-red-600' : 'text-yellow-600'
+                }`} />
+              </div>
+              <div>
+                <h3 className="text-lg font-medium text-gray-900">
+                  Switch to {selectedEnvironment === 'production' ? 'Production' : 'Sandbox'} Environment
+                </h3>
+                <p className="text-sm text-gray-600">
+                  {selectedEnvironment === 'production' 
+                    ? 'You are about to switch to the live production environment.'
+                    : 'You are about to switch to the sandbox testing environment.'
+                  }
+                </p>
+              </div>
+            </div>
+
+            {selectedEnvironment === 'production' && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+                <div className="flex items-start space-x-2">
+                  <ExclamationTriangleIcon className="h-5 w-5 text-red-500 mt-0.5 flex-shrink-0" />
+                  <div>
+                    <h4 className="font-medium text-red-800">Production Environment Warning</h4>
+                    <p className="text-sm text-red-700 mt-1">
+                      This will switch to the live FBR production environment. All invoice submissions will be real and cannot be undone.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div className="flex justify-end space-x-3">
+              <Button
+                onClick={cancelEnvironmentChange}
+                variant="outline"
+                disabled={isChangingEnvironment}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={confirmEnvironmentChange}
+                disabled={isChangingEnvironment}
+                className={selectedEnvironment === 'production' 
+                  ? 'bg-red-600 hover:bg-red-700' 
+                  : 'bg-yellow-600 hover:bg-yellow-700'
+                }
+              >
+                {isChangingEnvironment ? (
+                  <div className="flex items-center space-x-2">
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    <span>Switching...</span>
+                  </div>
+                ) : (
+                  `Switch to ${selectedEnvironment === 'production' ? 'Production' : 'Sandbox'}`
+                )}
+              </Button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
