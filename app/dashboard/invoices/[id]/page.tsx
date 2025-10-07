@@ -25,6 +25,7 @@ type InvoiceItem = {
   discount: string
   saleType: string
   sroItemSerialNo: string
+  error?: string
 }
 
 type BusinessNature = {
@@ -73,6 +74,7 @@ type Invoice = {
   updatedAt: string
   items: InvoiceItem[]
   seller: Seller
+  error?: string
 }
 
 type SectionKey = 'seller' | 'buyer' | 'products' | 'tax'
@@ -288,12 +290,39 @@ export default function InvoiceViewPage({ params }: { params: { id: string } }) 
                 }
                 
                 .invoice-header {
-                  display: flex;
-                  justify-content: space-between;
-                  align-items: center;
+                  position: relative;
+                  text-align: center;
                   margin-bottom: 30px;
                   border-bottom: 2px solid #000;
                   padding-bottom: 15px;
+                  min-height: 120px;
+                }
+                
+                .fbr-logo {
+                  position: absolute;
+                  top: 0;
+                  left: 0;
+                  font-weight: bold;
+                  font-size: 12px;
+                  color: #1e40af;
+                  z-index: 10;
+                }
+                
+                .qr-code {
+                  position: absolute;
+                  top: 0;
+                  right: 0;
+                  font-weight: bold;
+                  font-size: 10px;
+                  color: #333;
+                  z-index: 10;
+                }
+                
+                .invoice-title {
+                  font-size: 28px;
+                  font-weight: bold;
+                  margin-bottom: 10px;
+                  letter-spacing: 2px;
                 }
                 
                 .invoice-number {
@@ -444,8 +473,14 @@ export default function InvoiceViewPage({ params }: { params: { id: string } }) 
         const invoiceContent = `
           <!-- Invoice Header -->
           <div class="invoice-header">
+                    
+            
+            <div class="invoice-title">INVOICE</div>
             <div class="invoice-number">Invoice No: ${invoice.invoiceRefNo}</div>
+            <div class="invoice-number">FBR Invoice No: ${invoice.fbrInvoiceNumber || 'N/A'}</div>
             <div class="invoice-date">Date: ${new Date(invoice.invoiceDate).toLocaleDateString()}</div>
+                     
+      
           </div>
 
           <!-- Seller Details -->
@@ -605,6 +640,10 @@ export default function InvoiceViewPage({ params }: { params: { id: string } }) 
                   <div class="tax-label">FBR Status</div>
                   <div class="tax-value">${invoice.status}</div>
                 </div>
+                <div class="tax-item">
+                  <div class="tax-label">FBR Invoice Number</div>
+                  <div class="tax-value">${invoice.fbrInvoiceNumber || 'N/A'}</div>
+                </div>
               </div>
               <div>
                 <div class="tax-item">
@@ -626,12 +665,25 @@ export default function InvoiceViewPage({ params }: { params: { id: string } }) 
           printElement.innerHTML = invoiceContent
         }
         
+        // Simple text-based QR code (no external library needed)
+        setTimeout(() => {
+          const qrContainer = printWindow.document.querySelector('.qr-code')
+          if (qrContainer) {
+            const qrValue = invoice.fbrInvoiceNumber || 'TEST123'
+            qrContainer.innerHTML = `
+              <div style="text-align: center; font-size: 8px; font-weight: bold;">
+                QR: ${qrValue}
+              </div>
+            `
+          }
+        }, 100)
+        
         // Focus and print
         printWindow.focus()
         setTimeout(() => {
           printWindow.print()
           printWindow.close()
-        }, 100)
+        }, 1000) // Increased timeout to allow QR code generation
       }
     }
   }
@@ -796,6 +848,48 @@ export default function InvoiceViewPage({ params }: { params: { id: string } }) 
     )
   }
 
+  function renderErrors() {
+    if (!invoice) return null
+    
+    const hasMainError = invoice.error && invoice.error.trim() !== ''
+    const itemsWithErrors = invoice.items.filter(item => item.error && item.error.trim() !== '')
+    
+    if (!hasMainError && itemsWithErrors.length === 0) return null
+    
+    return (
+      <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+        <h2 className="text-base font-semibold text-red-800 mb-3">Errors & Validation Issues</h2>
+        
+        {/* Main Invoice Error */}
+        {hasMainError && (
+          <div className="mb-4">
+            <h3 className="text-sm font-medium text-red-700 mb-2">Invoice Level Error:</h3>
+            <div className="bg-red-100 border border-red-300 rounded p-3">
+              <p className="text-sm text-red-600">{invoice.error}</p>
+            </div>
+          </div>
+        )}
+        
+        {/* Item Level Errors */}
+        {itemsWithErrors.length > 0 && (
+          <div>
+            <h3 className="text-sm font-medium text-red-700 mb-2">Item Level Errors:</h3>
+            <div className="space-y-3">
+              {itemsWithErrors.map((item) => (
+                <div key={item.id} className="bg-red-100 border border-red-300 rounded p-3">
+                  <div className="text-sm font-medium text-red-800 mb-1">
+                    Item: {item.productDescription}
+                  </div>
+                  <p className="text-sm text-red-600">{item.error}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    )
+  }
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-96">
@@ -835,7 +929,7 @@ export default function InvoiceViewPage({ params }: { params: { id: string } }) 
           )}
         </div>
         <div className="mt-4 sm:mt-0 space-x-3 no-print">
-          {isSeller && (invoice.status === 'valid' || invoice.status === 'pending' || invoice.status === 'invalid') && (
+          {isSeller && (invoice.status === 'valid' || invoice.status === 'pending') && (
             <button
               onClick={handlePostInvoice}
               disabled={isPosting}
@@ -933,6 +1027,9 @@ export default function InvoiceViewPage({ params }: { params: { id: string } }) 
         )}
 
         <div className="p-6 space-y-6">
+          {/* Errors Section */}
+          {renderErrors()}
+          
           {(() => {
             const blocks: JSX.Element[] = []
             for (let i = 0; i < layout.length; i++) {
@@ -981,7 +1078,6 @@ export default function InvoiceViewPage({ params }: { params: { id: string } }) 
                       <table className="min-w-full divide-y divide-gray-200 text-xs">
                         <thead className="bg-gray-50">
                           <tr>
-                            <th className="px-2 py-1 text-left text-[11px] font-medium text-gray-600 uppercase tracking-wide">ID</th>
                             <th className="px-2 py-1 text-left text-[11px] font-medium text-gray-600 uppercase tracking-wide">Description</th>
                             <th className="px-2 py-1 text-left text-[11px] font-medium text-gray-600 uppercase tracking-wide">HS Code</th>
                             <th className="px-2 py-1 text-right text-[11px] font-medium text-gray-600 uppercase tracking-wide">Rate</th>
@@ -1002,10 +1098,20 @@ export default function InvoiceViewPage({ params }: { params: { id: string } }) 
                           </tr>
                         </thead>
                         <tbody className="bg-white divide-y divide-gray-200">
-                          {invoice.items?.map(item => (
-                            <tr key={item.id.toString()}>
-                              <td className="px-2 py-1 text-gray-900 font-medium">{item.id}</td>
-                              <td className="px-2 py-1 text-gray-900">{item.productDescription}</td>
+                          {invoice.items?.map(item => {
+                            const itemHasError = item.error && item.error.trim() !== ''
+                            return (
+                            <tr key={item.id.toString()} className={itemHasError ? 'bg-red-50' : ''}>
+                              <td className="px-2 py-1 text-gray-900">
+                                {item.productDescription}
+                                {itemHasError && (
+                                  <div className="mt-1">
+                                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                      ⚠️ Error
+                                    </span>
+                                  </div>
+                                )}
+                              </td>
                               <td className="px-2 py-1 text-gray-700">{item.hsCode || '—'}</td>
                               <td className="px-2 py-1 text-gray-700 text-right">{formatCurrency(parseFloat(item.rate), 'PKR')}</td>
                               <td className="px-2 py-1 text-gray-700 text-center">{item.uoM}</td>
@@ -1025,7 +1131,8 @@ export default function InvoiceViewPage({ params }: { params: { id: string } }) 
                               <td className="px-2 py-1 text-gray-700">{item.saleType}</td>
                               <td className="px-2 py-1 text-gray-700 text-center">{item.sroItemSerialNo}</td>
                             </tr>
-                          ))}
+                            )
+                          })}
                         </tbody>
                         <tfoot className="bg-gray-50 text-[11px]">
                           <tr>

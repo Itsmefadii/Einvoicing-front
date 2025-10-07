@@ -26,6 +26,11 @@ interface HSCode {
   updatedAt: string;
 }
 
+interface SaleType {
+  id: number;
+  transactionDesc: string;
+}
+
 interface InvoiceItem {
   id: string;
   productDescription: string;
@@ -68,6 +73,8 @@ export default function CreateInvoicePage() {
   const [isLoadingHsCodes, setIsLoadingHsCodes] = useState(false);
   const [hsCodeSearch, setHsCodeSearch] = useState<{ [itemId: string]: string }>({});
   const [showHsCodeDropdown, setShowHsCodeDropdown] = useState<{ [itemId: string]: boolean }>({});
+  const [saleTypes, setSaleTypes] = useState<SaleType[]>([]);
+  const [isLoadingSaleTypes, setIsLoadingSaleTypes] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [modalType, setModalType] = useState<'success' | 'error'>('success');
   const [modalMessage, setModalMessage] = useState('');
@@ -122,6 +129,45 @@ export default function CreateInvoicePage() {
     };
 
     fetchHsCodes();
+  }, []);
+
+  // Fetch Sale Types
+  useEffect(() => {
+    const fetchSaleTypes = async () => {
+      try {
+        setIsLoadingSaleTypes(true);
+        const token = localStorage.getItem('authToken') || localStorage.getItem('token');
+        
+        if (!token) {
+          console.error('No authorization token found');
+          return;
+        }
+
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
+        const response = await fetch(`${apiUrl}/system-configs/sale-type`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success && data.data) {
+            setSaleTypes(data.data);
+          }
+        } else {
+          console.error('Failed to fetch sale types:', response.status);
+        }
+      } catch (error) {
+        console.error('Error fetching sale types:', error);
+      } finally {
+        setIsLoadingSaleTypes(false);
+      }
+    };
+
+    fetchSaleTypes();
   }, []);
 
   // Filter HS codes based on search
@@ -276,10 +322,18 @@ export default function CreateInvoicePage() {
       }
 
       const { total } = calculateTotals();
-      const payload = {
+      
+      // Add percentage sign to rate fields before sending
+      const formWithPercentageRate = {
         ...form,
+        items: form.items.map(item => ({
+          ...item,
+          rate: item.rate ? `${item.rate}%` : item.rate
+        })),
         totalAmount: total.toString()
       };
+      
+      const payload = formWithPercentageRate;
 
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
       const response = await fetch(`${apiUrl}/invoice`, {
@@ -385,8 +439,8 @@ export default function CreateInvoicePage() {
                   required
                 >
                   <option value="">Select Invoice Type</option>
-                  <option value="SALE INVOICE">Sale Invoice</option>
-                  <option value="DEBIT NOTE">Debit Note</option>
+                  <option value="Sale Invoice">Sale Invoice</option>
+                  <option value="Debit Note">Debit Note</option>
                 </select>
               </div>
               <div>
@@ -470,9 +524,8 @@ export default function CreateInvoicePage() {
                   required
                 >
                   <option value="">Select Registration Type</option>
-                  <option value="REGISTERED">Registered</option>
-                  <option value="UNREGISTERED">Unregistered</option>
-                  <option value="CONSUMER">Consumer</option>
+                  <option value="Registered">Registered</option>
+                  <option value="Unregistered">Unregistered</option>
                 </select>
               </div>
             </div>
@@ -623,6 +676,17 @@ export default function CreateInvoicePage() {
                         placeholder="Enter sales excluding ST"
                       />
                     </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Fixed Notified Value/Retail Price</label>
+                      <Input
+                        type="number"
+                        value={item.fixedNotifiedValueOrRetailPrice}
+                        onChange={(e) => updateItem(item.id, 'fixedNotifiedValueOrRetailPrice', parseFloat(e.target.value) || 0)}
+                        min="0"
+                        step="0.01"
+                        placeholder="Enter fixed notified value"
+                      />
+                    </div>
                   </div>
 
                   {/* Tax Information */}
@@ -716,16 +780,20 @@ export default function CreateInvoicePage() {
                         onChange={(e) => updateItem(item.id, 'saleType', e.target.value)}
                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                         required
+                        disabled={isLoadingSaleTypes}
                       >
-                        <option value="">Select Sale Type</option>
-                        <option value="LOCAL">Local</option>
-                        <option value="EXPORT">Export</option>
+                        <option value="">{isLoadingSaleTypes ? 'Loading...' : 'Select Sale Type'}</option>
+                        {saleTypes.map((saleType) => (
+                          <option key={saleType.id} value={saleType.transactionDesc}>
+                            {saleType.transactionDesc}
+                          </option>
+                        ))}
                       </select>
                     </div>
                   </div>
 
                   {/* SRO Item Serial No and Remove Button */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">SRO Item Serial No</label>
                       <Input

@@ -16,6 +16,12 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/app/components/ui/card';
 import { Button } from '@/app/components/ui/button';
 import { Input } from '@/app/components/ui/input';
+import { SuccessModal } from '@/app/components/ui/success-modal';
+
+interface SaleType {
+  id: number;
+  transactionDesc: string;
+}
 
 interface InvoiceItem {
   id: string;
@@ -59,6 +65,10 @@ export default function EditInvoicePage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isDataLoaded, setIsDataLoaded] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [saleTypes, setSaleTypes] = useState<SaleType[]>([]);
+  const [isLoadingSaleTypes, setIsLoadingSaleTypes] = useState(false);
 
   // Check permissions on component mount
   useEffect(() => {
@@ -72,15 +82,54 @@ export default function EditInvoicePage() {
     }
   }, [user, authLoading, router]);
 
+  // Fetch Sale Types
+  useEffect(() => {
+    const fetchSaleTypes = async () => {
+      try {
+        setIsLoadingSaleTypes(true);
+        const token = localStorage.getItem('authToken') || localStorage.getItem('token');
+        
+        if (!token) {
+          console.error('No authorization token found');
+          return;
+        }
+
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
+        const response = await fetch(`${apiUrl}/system-configs/sale-type`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success && data.data) {
+            setSaleTypes(data.data);
+          }
+        } else {
+          console.error('Failed to fetch sale types:', response.status);
+        }
+      } catch (error) {
+        console.error('Error fetching sale types:', error);
+      } finally {
+        setIsLoadingSaleTypes(false);
+      }
+    };
+
+    fetchSaleTypes();
+  }, []);
+
   const [form, setForm] = useState<InvoiceForm>({
     invoiceRefNo: '',
-    invoiceType: 'SALE',
+    invoiceType: 'Sale Invoice',
     invoiceDate: '',
     buyerBusinessName: '',
     buyerNTNCNIC: '',
     buyerProvince: '',
     buyerAddress: '',
-    buyerRegistrationType: 'REGISTERED',
+    buyerRegistrationType: 'Registered',
     scenarioId: '',
     items: []
   });
@@ -112,21 +161,50 @@ export default function EditInvoicePage() {
           const data = await response.json();
           if (data.success && data.data) {
             const invoice = data.data;
+            
+            // Map old invoice type format to new format
+            const mapInvoiceType = (type: string) => {
+              switch (type) {
+                case 'SALE':
+                case 'SALE INVOICE':
+                  return 'Sale Invoice';
+                case 'DEBIT_NOTE':
+                case 'DEBIT NOTE':
+                  return 'Debit Note';
+                default:
+                  return type || 'Sale Invoice';
+              }
+            };
+            
+            // Map old buyer registration type format to new format
+            const mapBuyerRegistrationType = (type: string) => {
+              switch (type) {
+                case 'REGISTERED':
+                  return 'Registered';
+                case 'UNREGISTERED':
+                  return 'Unregistered';
+                case 'CONSUMER':
+                  return 'Registered'; // Map Consumer to Registered as fallback
+                default:
+                  return type || 'Registered';
+              }
+            };
+            
             setForm({
               invoiceRefNo: invoice.invoiceRefNo || '',
-              invoiceType: invoice.invoiceType || 'SALE',
+              invoiceType: mapInvoiceType(invoice.invoiceType),
               invoiceDate: invoice.invoiceDate ? invoice.invoiceDate.split('T')[0] : '',
               buyerBusinessName: invoice.buyerBusinessName || '',
               buyerNTNCNIC: invoice.buyerNTNCNIC || '',
               buyerProvince: invoice.buyerProvince || '',
               buyerAddress: invoice.buyerAddress || '',
-              buyerRegistrationType: invoice.buyerRegistrationType || 'REGISTERED',
+              buyerRegistrationType: mapBuyerRegistrationType(invoice.buyerRegistrationType),
               scenarioId: invoice.scenarioId?.toString() || '',
               items: invoice.items?.map((item: any, index: number) => ({
                 id: item.id?.toString() || (index + 1).toString(),
                 productDescription: item.productDescription || '',
                 hsCode: item.hsCode || '',
-                rate: item.rate?.toString() || '',
+                rate: item.rate?.toString().replace('%', '') || '',
                 uoM: item.uoM || 'PCS',
                 quantity: item.quantity?.toString() || '',
                 totalValues: item.totalValues?.toString() || '',
@@ -257,32 +335,42 @@ export default function EditInvoicePage() {
     e.preventDefault();
     console.log('Updating invoice:', form);
     
+    setIsSubmitting(true);
+    
     try {
       const token = localStorage.getItem('authToken') || localStorage.getItem('token');
       
       if (!token) {
         alert('No authorization token found. Please login again.');
+        setIsSubmitting(false);
         return;
       }
 
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
+      
+      // Add percentage sign to rate fields before sending
+      const formWithPercentageRate = {
+        ...form,
+        items: form.items.map(item => ({
+          ...item,
+          rate: item.rate ? `${item.rate}%` : item.rate
+        })),
+        totalAmount: calculateTotals().total.toString()
+      };
+      
       const response = await fetch(`${apiUrl}/invoice/${params.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
         },
-        body: JSON.stringify({
-          ...form,
-          totalAmount: calculateTotals().total.toString()
-        }),
+        body: JSON.stringify(formWithPercentageRate),
       });
 
       const data = await response.json();
 
       if (response.ok && data.success) {
-        alert('Invoice updated successfully!');
-        router.push(`/dashboard/invoices/${params.id}`);
+        setShowSuccessModal(true);
       } else {
         const errorMessage = data.message || data.error || 'Failed to update invoice';
         alert(`Failed to update invoice: ${errorMessage}`);
@@ -290,7 +378,14 @@ export default function EditInvoicePage() {
     } catch (error) {
       console.error('Error updating invoice:', error);
       alert('Error updating invoice. Please try again.');
+    } finally {
+      setIsSubmitting(false);
     }
+  };
+
+  const handleSuccessModalClose = () => {
+    setShowSuccessModal(false);
+    router.push(`/dashboard/invoices/${params.id}`);
   };
 
   const { subtotal, taxAmount, total } = calculateTotals();
@@ -382,8 +477,8 @@ export default function EditInvoicePage() {
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   required
                 >
-                  <option value="SALE">Sale Invoice</option>
-                  <option value="DEBIT_NOTE">Debit Note</option>
+                  <option value="Sale Invoice">Sale Invoice</option>
+                  <option value="Debit Note">Debit Note</option>
                 </select>
               </div>
               <div>
@@ -466,9 +561,8 @@ export default function EditInvoicePage() {
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   required
                 >
-                  <option value="REGISTERED">Registered</option>
-                  <option value="UNREGISTERED">Unregistered</option>
-                  <option value="CONSUMER">Consumer</option>
+                  <option value="Registered">Registered</option>
+                  <option value="Unregistered">Unregistered</option>
                 </select>
               </div>
             </div>
@@ -579,6 +673,17 @@ export default function EditInvoicePage() {
                         placeholder="Enter sales excluding ST"
                       />
                     </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Fixed Notified Value/Retail Price</label>
+                      <Input
+                        type="number"
+                        value={item.fixedNotifiedValueOrRetailPrice}
+                        onChange={(e) => updateItem(item.id, 'fixedNotifiedValueOrRetailPrice', e.target.value)}
+                        min="0"
+                        step="0.01"
+                        placeholder="Enter fixed notified value"
+                      />
+                    </div>
                   </div>
 
                   {/* Tax Information */}
@@ -672,15 +777,20 @@ export default function EditInvoicePage() {
                         onChange={(e) => updateItem(item.id, 'saleType', e.target.value)}
                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                         required
+                        disabled={isLoadingSaleTypes}
                       >
-                        <option value="LOCAL">Local</option>
-                        <option value="EXPORT">Export</option>
+                        <option value="">{isLoadingSaleTypes ? 'Loading...' : 'Select Sale Type'}</option>
+                        {saleTypes.map((saleType) => (
+                          <option key={saleType.id} value={saleType.transactionDesc}>
+                            {saleType.transactionDesc}
+                          </option>
+                        ))}
                       </select>
                     </div>
                   </div>
 
                   {/* SRO Item Serial No and Remove Button */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">SRO Item Serial No</label>
                       <Input
@@ -750,11 +860,21 @@ export default function EditInvoicePage() {
           <Button variant="outline" type="button" onClick={() => router.push(`/dashboard/invoices/${params.id}`)}>
             Cancel
           </Button>
-          <Button type="submit" className="min-w-[120px]">
-            Update Invoice
+          <Button type="submit" className="min-w-[120px]" disabled={isSubmitting}>
+            {isSubmitting ? 'Updating...' : 'Update Invoice'}
           </Button>
         </div>
       </form>
+
+      {/* Success Modal for Invoice Update */}
+      <SuccessModal
+        isOpen={showSuccessModal}
+        onClose={handleSuccessModalClose}
+        title="Invoice Updated Successfully!"
+        message="Your invoice has been updated successfully. You will be redirected to the invoice details page."
+        buttonText="Continue"
+        onButtonClick={handleSuccessModalClose}
+      />
     </div>
   );
 }

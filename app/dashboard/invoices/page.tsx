@@ -155,7 +155,7 @@ export default function InvoicesPage() {
     }
 
     if (statusFilter !== 'all') {
-      filtered = filtered.filter(invoice => invoice.status === statusFilter);
+      filtered = filtered.filter(invoice => invoice.status.toLowerCase() === statusFilter.toLowerCase());
     }
 
     setFilteredInvoices(filtered);
@@ -172,7 +172,8 @@ export default function InvoicesPage() {
       draft: { color: 'bg-gray-100 text-gray-800', icon: DocumentTextIcon },
     };
 
-    const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.pending;
+    const normalizedStatus = status.toLowerCase();
+    const config = statusConfig[normalizedStatus as keyof typeof statusConfig] || statusConfig.pending;
     const Icon = config.icon;
 
     return (
@@ -270,10 +271,8 @@ export default function InvoicesPage() {
 
   const handleModalClose = () => {
     setShowModal(false);
-    // Refresh the page only when user closes the success modal
-    if (modalType === 'success') {
-      window.location.reload();
-    }
+    // Refresh the page when user closes the modal (clicks Continue or Try Again)
+    window.location.reload();
   };
 
   const handleDeleteClick = (invoiceId: number) => {
@@ -313,7 +312,6 @@ export default function InvoicesPage() {
         setShowModal(true);
         setShowDeleteModal(false);
         setDeleteInvoiceId(null);
-        // Don't refresh immediately - let user close modal first
       } else {
         const errorMessage = data.message || data.error || 'Failed to delete invoice';
         setModalType('error');
@@ -498,11 +496,8 @@ export default function InvoicesPage() {
             >
               <option value="all">All Statuses</option>
               <option value="pending">Pending</option>
-              <option value="valid">Valid</option>
               <option value="invalid">Invalid</option>
               <option value="submitted">Submitted</option>
-              <option value="failed">Failed</option>
-              <option value="draft">Draft</option>
             </select>
           </div>
 
@@ -587,7 +582,7 @@ export default function InvoicesPage() {
                       >
                         <EyeIcon className="h-4 w-4" />
                       </Link>
-                      {isSeller && invoice.status !== 'submitted' && (
+                      {isSeller && invoice.status.toLowerCase() !== 'submitted' && (
                         <Link
                           href={`/dashboard/invoices/${invoice.id}/edit`}
                           className="text-green-600 hover:text-green-900 p-1"
@@ -596,7 +591,7 @@ export default function InvoicesPage() {
                           <PencilIcon className="h-4 w-4" />
                         </Link>
                       )}
-                      {isSeller && (invoice.status === 'valid' || invoice.status === 'pending' || invoice.status === 'invalid') && (
+                      {isSeller && (invoice.status.toLowerCase() === 'valid' || invoice.status.toLowerCase() === 'pending') && (
                         <button
                           onClick={() => handlePostInvoice(invoice.id)}
                           disabled={postingInvoice === invoice.id}
@@ -613,7 +608,7 @@ export default function InvoicesPage() {
                           )}
                         </button>
                       )}
-                      {invoice.status === 'failed' && (
+                      {invoice.status.toLowerCase() === 'failed' && (
                         <button
                           className="text-orange-600 hover:text-orange-900 p-1"
                           title="Retry"
@@ -621,7 +616,7 @@ export default function InvoicesPage() {
                           <ArrowUpTrayIcon className="h-4 w-4" />
                         </button>
                       )}
-                      {(invoice.status === 'draft' || invoice.status === 'invalid' || invoice.status === 'pending') && (
+                      {(invoice.status.toLowerCase() === 'draft' || invoice.status.toLowerCase() === 'invalid' || invoice.status.toLowerCase() === 'pending' || invoice.status.toLowerCase() === 'failed') && (
                         <button
                           onClick={() => handleDeleteClick(invoice.id)}
                           className="text-red-600 hover:text-red-900 p-1"

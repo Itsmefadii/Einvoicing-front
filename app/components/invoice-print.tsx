@@ -1,6 +1,7 @@
 'use client'
 
-import { formatCurrency } from '@/lib/utils'
+import React, { useEffect, useRef } from 'react'
+import QRCode from 'qrcode.react'
 
 interface InvoiceItem {
   id: number
@@ -86,6 +87,8 @@ function formatCurrency(amount: number, currency: string) {
 }
 
 export default function InvoicePrint({ invoice }: InvoicePrintProps) {
+  const qrRef = useRef<HTMLDivElement>(null)
+  
   const totals = {
     amount: parseFloat(invoice.totalAmount) || 0,
     tax: invoice.items.reduce((sum, item) => {
@@ -93,6 +96,13 @@ export default function InvoicePrint({ invoice }: InvoicePrintProps) {
     }, 0),
     total: parseFloat(invoice.totalAmount) || 0
   }
+
+  // Debug logging
+  useEffect(() => {
+    console.log('Invoice FBR Number:', invoice.fbrInvoiceNumber)
+    console.log('QR Code should render:', !!invoice.fbrInvoiceNumber)
+    console.log('Invoice object:', invoice)
+  }, [invoice.fbrInvoiceNumber])
 
   return (
     <div className="invoice-print">
@@ -117,6 +127,74 @@ export default function InvoicePrint({ invoice }: InvoicePrintProps) {
           margin-bottom: 30px;
           border-bottom: 2px solid #000;
           padding-bottom: 15px;
+          position: relative;
+          min-height: 100px;
+        }
+        
+        .fbr-logo {
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 80px;
+          height: 80px;
+          background: #1e40af;
+          color: white;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-weight: bold;
+          font-size: 12px;
+          border-radius: 8px;
+          text-align: center;
+          line-height: 1.2;
+          z-index: 5;
+          border: 2px solid #000;
+        }
+        
+        .qr-code {
+          position: absolute;
+          top: 0;
+          right: 0;
+          width: 80px;
+          height: 80px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: white;
+          border: 2px solid #000;
+          border-radius: 8px;
+          padding: 5px;
+          z-index: 10;
+        }
+        
+        .qr-code canvas,
+        .qr-code svg {
+          max-width: 100%;
+          max-height: 100%;
+          display: block;
+        }
+        
+        .qr-code svg {
+          width: 50px;
+          height: 50px;
+        }
+        
+        .qr-placeholder {
+          position: absolute;
+          top: 0;
+          right: 0;
+          width: 80px;
+          height: 80px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background: #f5f5f5;
+          border: 2px dashed #ccc;
+          border-radius: 8px;
+          color: #666;
+          font-size: 10px;
+          text-align: center;
+          line-height: 1.2;
         }
         
         .invoice-title {
@@ -248,6 +326,46 @@ export default function InvoicePrint({ invoice }: InvoicePrintProps) {
             font-size: 16px;
           }
           
+          .fbr-logo {
+            width: 70px;
+            height: 70px;
+            font-size: 10px;
+            position: absolute !important;
+            top: 0 !important;
+            left: 0 !important;
+            display: flex !important;
+          }
+          
+          .qr-code {
+            width: 70px;
+            height: 70px;
+            position: absolute !important;
+            top: 0 !important;
+            right: 0 !important;
+            display: flex !important;
+            z-index: 10 !important;
+          }
+          
+          .qr-code svg {
+            width: 50px !important;
+            height: 50px !important;
+            display: block !important;
+          }
+          
+          .qr-code canvas {
+            width: 50px !important;
+            height: 50px !important;
+            display: block !important;
+          }
+          
+          .print-only {
+            display: block !important;
+          }
+          
+          .print-qr-fallback {
+            display: flex !important;
+          }
+          
           .products-table {
             font-size: 9px;
           }
@@ -261,9 +379,88 @@ export default function InvoicePrint({ invoice }: InvoicePrintProps) {
 
       {/* Invoice Header */}
       <div className="invoice-header">
+        {/* FBR Logo - Simple approach */}
+        <div style={{
+          position: 'absolute',
+          top: '0px',
+          left: '0px',
+          width: '80px',
+          height: '80px',
+          backgroundColor: '#1e40af',
+          color: 'white',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontWeight: 'bold',
+          fontSize: '12px',
+          border: '2px solid #000',
+          textAlign: 'center',
+          lineHeight: '1.2',
+          zIndex: 10
+        }}>
+          <div>
+            <div>FBR</div>
+            <div>PAKISTAN</div>
+          </div>
+        </div>
+        
+        {/* QR Code - Simple approach */}
+        <div style={{
+          position: 'absolute',
+          top: '0px',
+          right: '0px',
+          width: '80px',
+          height: '80px',
+          border: '2px solid #000',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: 'white',
+          zIndex: 10
+        }}>
+          <div style={{textAlign: 'center', fontSize: '8px', fontWeight: 'bold'}}>
+            <div>QR CODE</div>
+            <div style={{marginTop: '5px', fontSize: '6px'}}>
+              {invoice.fbrInvoiceNumber || 'TEST123'}
+            </div>
+          </div>
+        </div>
+        
         <div className="invoice-title">INVOICE</div>
         <div className="invoice-number">Invoice No: {invoice.invoiceRefNo}</div>
+        <div className="invoice-number">FBR Invoice No: {invoice.fbrInvoiceNumber || 'N/A'}</div>
         <div className="invoice-date">Date: {new Date(invoice.invoiceDate).toLocaleDateString()}</div>
+        
+        {/* Simple FBR Logo Text - Always visible */}
+        <div style={{
+          position: 'absolute',
+          top: '90px',
+          left: '10px',
+          fontSize: '10px',
+          fontWeight: 'bold',
+          border: '1px solid #000',
+          padding: '5px',
+          backgroundColor: '#1e40af',
+          color: 'white',
+          textAlign: 'center'
+        }}>
+          FBR PAKISTAN
+        </div>
+        
+        {/* Simple QR Code Text - Always visible */}
+        <div style={{
+          position: 'absolute',
+          top: '90px',
+          right: '10px',
+          fontSize: '10px',
+          fontWeight: 'bold',
+          border: '1px solid #000',
+          padding: '5px',
+          backgroundColor: '#f0f0f0',
+          textAlign: 'center'
+        }}>
+          QR: {invoice.fbrInvoiceNumber || 'TEST123'}
+        </div>
       </div>
 
       {/* Seller Details */}
@@ -422,6 +619,10 @@ export default function InvoicePrint({ invoice }: InvoicePrintProps) {
             <div className="tax-item">
               <div className="tax-label">FBR Status</div>
               <div className="tax-value">{invoice.status}</div>
+            </div>
+            <div className="tax-item">
+              <div className="tax-label">FBR Number</div>
+              <div className="tax-value">{invoice.fbrInvoiceNumber || 'N/A'}</div>
             </div>
           </div>
           <div>
