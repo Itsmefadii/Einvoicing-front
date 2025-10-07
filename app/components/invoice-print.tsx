@@ -137,18 +137,17 @@ export default function InvoicePrint({ invoice }: InvoicePrintProps) {
           left: 0;
           width: 80px;
           height: 80px;
-          background: #1e40af;
-          color: white;
           display: flex;
           align-items: center;
           justify-content: center;
-          font-weight: bold;
-          font-size: 12px;
-          border-radius: 8px;
-          text-align: center;
-          line-height: 1.2;
+          background: white;
           z-index: 5;
-          border: 2px solid #000;
+        }
+        
+        .fbr-logo img {
+          max-width: 100%;
+          max-height: 100%;
+          display: block;
         }
         
         .qr-code {
@@ -329,11 +328,15 @@ export default function InvoicePrint({ invoice }: InvoicePrintProps) {
           .fbr-logo {
             width: 70px;
             height: 70px;
-            font-size: 10px;
             position: absolute !important;
             top: 0 !important;
             left: 0 !important;
             display: flex !important;
+          }
+          .fbr-logo img {
+            width: 60px !important;
+            height: 60px !important;
+            display: block !important;
           }
           
           .qr-code {
@@ -379,29 +382,37 @@ export default function InvoicePrint({ invoice }: InvoicePrintProps) {
 
       {/* Invoice Header */}
       <div className="invoice-header">
-        {/* FBR Logo - Simple approach */}
+        {/* FBR Logo */}
         <div style={{
           position: 'absolute',
           top: '0px',
           left: '0px',
           width: '80px',
           height: '80px',
-          backgroundColor: '#1e40af',
-          color: 'white',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          fontWeight: 'bold',
-          fontSize: '12px',
-          border: '2px solid #000',
-          textAlign: 'center',
-          lineHeight: '1.2',
+          backgroundColor: 'white',
           zIndex: 10
         }}>
-          <div>
-            <div>FBR</div>
-            <div>PAKISTAN</div>
-          </div>
+          <img 
+            src="/images/fbr_logo.png" 
+            alt="FBR Pakistan Logo" 
+            style={{
+              maxWidth: '100%',
+              maxHeight: '100%',
+              display: 'block'
+            }}
+            onError={(e) => {
+              // Fallback to text if image fails to load
+              e.currentTarget.style.display = 'none';
+              e.currentTarget.parentElement!.innerHTML = `
+                <div style="text-align: center; font-size: 10px; font-weight: bold; color: #1e40af;">
+                  FBR<br/>PAKISTAN
+                </div>
+              `;
+            }}
+          />
         </div>
         
         {/* QR Code - Simple approach */}
@@ -431,21 +442,6 @@ export default function InvoicePrint({ invoice }: InvoicePrintProps) {
         <div className="invoice-number">FBR Invoice No: {invoice.fbrInvoiceNumber || 'N/A'}</div>
         <div className="invoice-date">Date: {new Date(invoice.invoiceDate).toLocaleDateString()}</div>
         
-        {/* Simple FBR Logo Text - Always visible */}
-        <div style={{
-          position: 'absolute',
-          top: '90px',
-          left: '10px',
-          fontSize: '10px',
-          fontWeight: 'bold',
-          border: '1px solid #000',
-          padding: '5px',
-          backgroundColor: '#1e40af',
-          color: 'white',
-          textAlign: 'center'
-        }}>
-          FBR PAKISTAN
-        </div>
         
         {/* Simple QR Code Text - Always visible */}
         <div style={{

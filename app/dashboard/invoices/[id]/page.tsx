@@ -258,11 +258,45 @@ export default function InvoiceViewPage({ params }: { params: { id: string } }) 
   };
 
   // Print function
-  const handlePrint = () => {
+  const handlePrint = async () => {
     if (typeof window !== 'undefined' && invoice) {
+      // Import QRCode dynamically
+      const QRCode = (await import('qrcode')).default;
+      
       // Create a new window for printing
       const printWindow = window.open('', '_blank', 'width=800,height=600')
       if (printWindow) {
+        // Generate QR code data URL
+        const qrValue = invoice.fbrInvoiceNumber || 'TEST123';
+        let qrCodeDataUrl = '';
+        let logoDataUrl = '';
+        
+        try {
+          qrCodeDataUrl = await QRCode.toDataURL(qrValue, {
+            width: 80,
+            margin: 1,
+            color: {
+              dark: '#000000',
+              light: '#FFFFFF'
+            }
+          });
+        } catch (error) {
+          console.error('Error generating QR code:', error);
+        }
+
+        // Convert logo to data URL
+        try {
+          const response = await fetch('/images/fbr_logo.png');
+          const blob = await response.blob();
+          logoDataUrl = await new Promise<string>((resolve) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result as string);
+            reader.readAsDataURL(blob);
+          });
+        } catch (error) {
+          console.error('Error loading logo:', error);
+        }
+
         // Write the HTML structure
         printWindow.document.write(`
           <!DOCTYPE html>
@@ -302,20 +336,39 @@ export default function InvoiceViewPage({ params }: { params: { id: string } }) 
                   position: absolute;
                   top: 0;
                   left: 0;
-                  font-weight: bold;
-                  font-size: 12px;
-                  color: #1e40af;
+                  width: 80px;
+                  height: 80px;
+                  display: flex;
+                  align-items: center;
+                  justify-content: center;
+                  background: white;
                   z-index: 10;
+                }
+                
+                .fbr-logo img {
+                  max-width: 100%;
+                  max-height: 100%;
+                  display: block;
                 }
                 
                 .qr-code {
                   position: absolute;
                   top: 0;
                   right: 0;
-                  font-weight: bold;
-                  font-size: 10px;
-                  color: #333;
+                  width: 80px;
+                  height: 80px;
+                  border: 2px solid #000;
+                  display: flex;
+                  align-items: center;
+                  justify-content: center;
+                  background: white;
                   z-index: 10;
+                }
+                
+                .qr-code img {
+                  max-width: 100%;
+                  max-height: 100%;
+                  display: block;
                 }
                 
                 .invoice-title {
@@ -437,6 +490,33 @@ export default function InvoiceViewPage({ params }: { params: { id: string } }) 
                   .products-table { font-size: 9px; }
                   .products-table th,
                   .products-table td { padding: 2px 4px; }
+                  .fbr-logo {
+                    width: 70px !important;
+                    height: 70px !important;
+                    position: absolute !important;
+                    top: 0 !important;
+                    left: 0 !important;
+                    display: flex !important;
+                  }
+                  .fbr-logo img {
+                    width: 60px !important;
+                    height: 60px !important;
+                    display: block !important;
+                  }
+                  .qr-code {
+                    width: 70px !important;
+                    height: 70px !important;
+                    position: absolute !important;
+                    top: 0 !important;
+                    right: 0 !important;
+                    display: flex !important;
+                    z-index: 10 !important;
+                  }
+                  .qr-code img {
+                    width: 60px !important;
+                    height: 60px !important;
+                    display: block !important;
+                  }
                 }
               </style>
             </head>
@@ -473,14 +553,28 @@ export default function InvoiceViewPage({ params }: { params: { id: string } }) 
         const invoiceContent = `
           <!-- Invoice Header -->
           <div class="invoice-header">
-                    
+            <!-- FBR Logo -->
+            <div class="fbr-logo">
+              ${logoDataUrl ? `<img src="${logoDataUrl}" alt="FBR Pakistan Logo" />` : `
+                <div style="text-align: center; font-size: 10px; font-weight: bold; color: #1e40af;">
+                  FBR<br/>PAKISTAN
+                </div>
+              `}
+            </div>
+            
+            <!-- QR Code -->
+            <div class="qr-code">
+              ${qrCodeDataUrl ? `<img src="${qrCodeDataUrl}" alt="QR Code" />` : `
+                <div style="text-align: center; font-size: 8px; font-weight: bold;">
+                  QR: ${qrValue}
+                </div>
+              `}
+            </div>
             
             <div class="invoice-title">INVOICE</div>
             <div class="invoice-number">Invoice No: ${invoice.invoiceRefNo}</div>
             <div class="invoice-number">FBR Invoice No: ${invoice.fbrInvoiceNumber || 'N/A'}</div>
             <div class="invoice-date">Date: ${new Date(invoice.invoiceDate).toLocaleDateString()}</div>
-                     
-      
           </div>
 
           <!-- Seller Details -->
@@ -665,25 +759,12 @@ export default function InvoiceViewPage({ params }: { params: { id: string } }) 
           printElement.innerHTML = invoiceContent
         }
         
-        // Simple text-based QR code (no external library needed)
-        setTimeout(() => {
-          const qrContainer = printWindow.document.querySelector('.qr-code')
-          if (qrContainer) {
-            const qrValue = invoice.fbrInvoiceNumber || 'TEST123'
-            qrContainer.innerHTML = `
-              <div style="text-align: center; font-size: 8px; font-weight: bold;">
-                QR: ${qrValue}
-              </div>
-            `
-          }
-        }, 100)
-        
         // Focus and print
         printWindow.focus()
         setTimeout(() => {
           printWindow.print()
           printWindow.close()
-        }, 1000) // Increased timeout to allow QR code generation
+        }, 500) // Reduced timeout since QR code is already generated
       }
     }
   }
@@ -736,14 +817,27 @@ export default function InvoiceViewPage({ params }: { params: { id: string } }) 
   }, [params.id])
 
   const totals = useMemo(() => {
-    if (!invoice) return { amount: 0, tax: 0, total: 0 }
+    if (!invoice) return { 
+      totalValues: 0, salesExcludingST: 0, fixedValue: 0, salesTax: 0, 
+      extraTax: 0, furtherTax: 0, fedPayable: 0, discount: 0, 
+      totalTax: 0, total: 0 
+    }
+    
+    const totalValues = invoice.items.reduce((sum, item) => sum + (parseFloat(item.totalValues) || 0), 0)
+    const salesExcludingST = invoice.items.reduce((sum, item) => sum + (parseFloat(item.valueSalesExcludingST) || 0), 0)
+    const fixedValue = invoice.items.reduce((sum, item) => sum + (parseFloat(item.fixedNotifiedValueOrRetailPrice) || 0), 0)
+    const salesTax = invoice.items.reduce((sum, item) => sum + (parseFloat(item.salesTaxWithheldAtSource) || 0), 0)
+    const extraTax = invoice.items.reduce((sum, item) => sum + (parseFloat(item.extraTax) || 0), 0)
+    const furtherTax = invoice.items.reduce((sum, item) => sum + (parseFloat(item.furtherTax) || 0), 0)
+    const fedPayable = invoice.items.reduce((sum, item) => sum + (parseFloat(item.fedPayable) || 0), 0)
+    const discount = invoice.items.reduce((sum, item) => sum + (parseFloat(item.discount) || 0), 0)
+    const totalTax = salesTax + extraTax + furtherTax
     const total = parseFloat(invoice.totalAmount) || 0
-    // Calculate tax amount from items
-    const taxAmount = invoice.items.reduce((sum, item) => {
-      return sum + (parseFloat(item.salesTaxWithheldAtSource) || 0) + (parseFloat(item.extraTax) || 0) + (parseFloat(item.furtherTax) || 0)
-    }, 0)
-    const amount = total - taxAmount
-    return { amount, tax: taxAmount, total }
+    
+    return { 
+      totalValues, salesExcludingST, fixedValue, salesTax, 
+      extraTax, furtherTax, fedPayable, discount, totalTax, total 
+    }
   }, [invoice])
 
   function moveSection(index: number, direction: -1 | 1) {
@@ -1136,19 +1230,19 @@ export default function InvoiceViewPage({ params }: { params: { id: string } }) 
                         </tbody>
                         <tfoot className="bg-gray-50 text-[11px]">
                           <tr>
-                            <td className="px-2 py-1 font-medium text-gray-900" colSpan={6}>
+                            <td className="px-2 py-1 font-medium text-gray-900" colSpan={5}>
                               Totals
                             </td>
-                            <td className="px-2 py-1 font-bold text-right text-gray-900">{formatCurrency(totals.total, 'PKR')}</td>
-                            <td className="px-2 py-1 font-medium text-right text-gray-900">{formatCurrency(totals.amount, 'PKR')}</td>
-                            <td className="px-2 py-1 font-medium text-right text-gray-900">{formatCurrency(totals.amount, 'PKR')}</td>
+                            <td className="px-2 py-1 font-bold text-right text-gray-900">{formatCurrency(totals.totalValues, 'PKR')}</td>
+                            <td className="px-2 py-1 font-medium text-right text-gray-900">{formatCurrency(totals.salesExcludingST, 'PKR')}</td>
+                            <td className="px-2 py-1 font-medium text-right text-gray-900">{formatCurrency(totals.fixedValue, 'PKR')}</td>
                             <td className="px-2 py-1 text-center text-gray-900">—</td>
-                            <td className="px-2 py-1 font-medium text-right text-gray-900">{formatCurrency(totals.tax, 'PKR')}</td>
-                            <td className="px-2 py-1 font-medium text-right text-gray-900">{formatCurrency(totals.tax, 'PKR')}</td>
-                            <td className="px-2 py-1 font-medium text-right text-gray-900">{formatCurrency(totals.tax, 'PKR')}</td>
+                            <td className="px-2 py-1 font-medium text-right text-gray-900">{formatCurrency(totals.salesTax, 'PKR')}</td>
+                            <td className="px-2 py-1 font-medium text-right text-gray-900">{formatCurrency(totals.extraTax, 'PKR')}</td>
+                            <td className="px-2 py-1 font-medium text-right text-gray-900">{formatCurrency(totals.furtherTax, 'PKR')}</td>
                             <td className="px-2 py-1 text-center text-gray-900">—</td>
-                            <td className="px-2 py-1 font-medium text-right text-gray-900">{formatCurrency(0, 'PKR')}</td>
-                            <td className="px-2 py-1 font-medium text-right text-gray-900">{formatCurrency(0, 'PKR')}</td>
+                            <td className="px-2 py-1 font-medium text-right text-gray-900">{formatCurrency(totals.fedPayable, 'PKR')}</td>
+                            <td className="px-2 py-1 font-medium text-right text-gray-900">{formatCurrency(totals.discount, 'PKR')}</td>
                             <td className="px-2 py-1 text-center text-gray-900">—</td>
                             <td className="px-2 py-1 text-center text-gray-900">—</td>
                           </tr>
@@ -1168,11 +1262,11 @@ export default function InvoiceViewPage({ params }: { params: { id: string } }) 
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
                         <div>
                           <div className="text-gray-500">Net Amount</div>
-                          <div className="text-gray-900">{formatCurrency(totals.amount, 'PKR')}</div>
+                          <div className="text-gray-900">{formatCurrency(totals.salesExcludingST, 'PKR')}</div>
                         </div>
                         <div>
-                          <div className="text-gray-500">Tax Amount</div>
-                          <div className="text-gray-900">{formatCurrency(totals.tax, 'PKR')}</div>
+                          <div className="text-gray-500">Total Tax</div>
+                          <div className="text-gray-900">{formatCurrency(totals.totalTax, 'PKR')}</div>
                         </div>
                         <div>
                           <div className="text-gray-500">Total Amount</div>

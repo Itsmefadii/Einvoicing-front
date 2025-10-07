@@ -442,6 +442,295 @@ INV-2024-002,2024-06-16,XYZ Corporation,2345678,2345678901234,Consulting Service
                 <li>• HS Code is optional but recommended for FBR compliance</li>
               </ul>
             </div>
+
+            {/* Field Requirements Table */}
+            <div className="mt-6">
+              <h3 className="font-medium text-gray-900 mb-4">Field Requirements & Specifications</h3>
+              <div className="overflow-x-auto">
+                <table className="min-w-full border border-gray-200 rounded-lg">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b border-gray-200">
+                        Field Name
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b border-gray-200">
+                        Type
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b border-gray-200">
+                        Required
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b border-gray-200">
+                        Sample Data
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b border-gray-200">
+                        Description
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    <tr>
+                      <td className="px-4 py-3 text-sm font-medium text-gray-900">InvoiceType</td>
+                      <td className="px-4 py-3 text-sm text-gray-600">String</td>
+                      <td className="px-4 py-3 text-sm">
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                          Required
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-600">"Sale Invoice"</td>
+                      <td className="px-4 py-3 text-sm text-gray-600">• Sales Invoice<br/>• Debit Note</td>
+                    </tr>
+                    <tr>
+                      <td className="px-4 py-3 text-sm font-medium text-gray-900">invoiceDate</td>
+                      <td className="px-4 py-3 text-sm text-gray-600">Date</td>
+                      <td className="px-4 py-3 text-sm">
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                          Required
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-600">"2025-04-21"</td>
+                      <td className="px-4 py-3 text-sm text-gray-600">Date of Invoice Issuance</td>
+                    </tr>
+                    <tr>
+                      <td className="px-4 py-3 text-sm font-medium text-gray-900">buyerNTNCNIC</td>
+                      <td className="px-4 py-3 text-sm text-gray-600">String</td>
+                      <td className="px-4 py-3 text-sm">
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                          Optional*
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-600">"1000000000000"</td>
+                      <td className="px-4 py-3 text-sm text-gray-600">Buyer NTN/CNIC (Optional in case of Unregistered)</td>
+                    </tr>
+                    <tr>
+                      <td className="px-4 py-3 text-sm font-medium text-gray-900">buyerBusinessName</td>
+                      <td className="px-4 py-3 text-sm text-gray-600">String</td>
+                      <td className="px-4 py-3 text-sm">
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                          Required
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-600">"FERTILIZER MANUFAC IRS NEW"</td>
+                      <td className="px-4 py-3 text-sm text-gray-600">Buyer Business Name</td>
+                    </tr>
+                    <tr>
+                      <td className="px-4 py-3 text-sm font-medium text-gray-900">buyerProvince</td>
+                      <td className="px-4 py-3 text-sm text-gray-600">String</td>
+                      <td className="px-4 py-3 text-sm">
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                          Required
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-600">"Sindh"</td>
+                      <td className="px-4 py-3 text-sm text-gray-600">Buyer Province (from reference API 5.1)</td>
+                    </tr>
+                    <tr>
+                      <td className="px-4 py-3 text-sm font-medium text-gray-900">buyerAddress</td>
+                      <td className="px-4 py-3 text-sm text-gray-600">String</td>
+                      <td className="px-4 py-3 text-sm">
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                          Required
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-600">"Karachi"</td>
+                      <td className="px-4 py-3 text-sm text-gray-600">Buyer Address</td>
+                    </tr>
+                    <tr>
+                      <td className="px-4 py-3 text-sm font-medium text-gray-900">buyeRegistrationType</td>
+                      <td className="px-4 py-3 text-sm text-gray-600">String</td>
+                      <td className="px-4 py-3 text-sm">
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                          Required
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-600">"Unregistered"</td>
+                      <td className="px-4 py-3 text-sm text-gray-600">• Registered<br/>• Unregistered</td>
+                    </tr>
+                    <tr>
+                      <td className="px-4 py-3 text-sm font-medium text-gray-900">invoiceRefNo</td>
+                      <td className="px-4 py-3 text-sm text-gray-600">String</td>
+                      <td className="px-4 py-3 text-sm">
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                          Required
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-600">"INV-101"</td>
+                      <td className="px-4 py-3 text-sm text-gray-600">Invoice Reference Number</td>
+                    </tr>
+                    <tr>
+                      <td className="px-4 py-3 text-sm font-medium text-gray-900">scenarioId</td>
+                      <td className="px-4 py-3 text-sm text-gray-600">String</td>
+                      <td className="px-4 py-3 text-sm">
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                          Sandbox Only
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-600">"SN001"</td>
+                      <td className="px-4 py-3 text-sm text-gray-600">Scenario ID/Number (Refer to Scenarios for Sandbox Testing)</td>
+                    </tr>
+                    <tr>
+                      <td className="px-4 py-3 text-sm font-medium text-gray-900">hsCode</td>
+                      <td className="px-4 py-3 text-sm text-gray-600">String</td>
+                      <td className="px-4 py-3 text-sm">
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                          Required
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-600">"0101.2100"</td>
+                      <td className="px-4 py-3 text-sm text-gray-600">Harmonized System (HS) Code of the product</td>
+                    </tr>
+                    <tr>
+                      <td className="px-4 py-3 text-sm font-medium text-gray-900">productDescription</td>
+                      <td className="px-4 py-3 text-sm text-gray-600">String</td>
+                      <td className="px-4 py-3 text-sm">
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                          Required
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-600">"product Description"</td>
+                      <td className="px-4 py-3 text-sm text-gray-600">Details of the product or service sold</td>
+                    </tr>
+                    <tr>
+                      <td className="px-4 py-3 text-sm font-medium text-gray-900">rate</td>
+                      <td className="px-4 py-3 text-sm text-gray-600">String</td>
+                      <td className="px-4 py-3 text-sm">
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                          Required
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-600">"18%"</td>
+                      <td className="px-4 py-3 text-sm text-gray-600">Tax Rate (ratE_DESC from reference API 5.8)</td>
+                    </tr>
+                    <tr>
+                      <td className="px-4 py-3 text-sm font-medium text-gray-900">uoM</td>
+                      <td className="px-4 py-3 text-sm text-gray-600">String</td>
+                      <td className="px-4 py-3 text-sm">
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                          Required
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-600">"Numbers, pieces, units"</td>
+                      <td className="px-4 py-3 text-sm text-gray-600">Unit of Measurement (uom from reference API 5.6)</td>
+                    </tr>
+                    <tr>
+                      <td className="px-4 py-3 text-sm font-medium text-gray-900">quantity</td>
+                      <td className="px-4 py-3 text-sm text-gray-600">Number (Decimal)</td>
+                      <td className="px-4 py-3 text-sm">
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                          Required
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-600">1.0000</td>
+                      <td className="px-4 py-3 text-sm text-gray-600">Quantity of the item sold</td>
+                    </tr>
+                    <tr>
+                      <td className="px-4 py-3 text-sm font-medium text-gray-900">totalValues</td>
+                      <td className="px-4 py-3 text-sm text-gray-600">Number (Decimal)</td>
+                      <td className="px-4 py-3 text-sm">
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                          Required
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-600">0.00</td>
+                      <td className="px-4 py-3 text-sm text-gray-600">Total Sales Value (Including Tax)</td>
+                    </tr>
+                    <tr>
+                      <td className="px-4 py-3 text-sm font-medium text-gray-900">valueSalesExcludingST</td>
+                      <td className="px-4 py-3 text-sm text-gray-600">Number (Decimal)</td>
+                      <td className="px-4 py-3 text-sm">
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                          Required
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-600">1000.00</td>
+                      <td className="px-4 py-3 text-sm text-gray-600">Sales Value Excluding sales tax</td>
+                    </tr>
+                    <tr>
+                      <td className="px-4 py-3 text-sm font-medium text-gray-900">fixedNotifiedValueOrRetailPrice</td>
+                      <td className="px-4 py-3 text-sm text-gray-600">Number (Decimal)</td>
+                      <td className="px-4 py-3 text-sm">
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                          Required
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-600">0.00</td>
+                      <td className="px-4 py-3 text-sm text-gray-600">Notified fixed price or retail price, (Item Based)</td>
+                    </tr>
+                    <tr>
+                      <td className="px-4 py-3 text-sm font-medium text-gray-900">salesTaxApplicable</td>
+                      <td className="px-4 py-3 text-sm text-gray-600">Number (Decimal)</td>
+                      <td className="px-4 py-3 text-sm">
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                          Required
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-600">180.00</td>
+                      <td className="px-4 py-3 text-sm text-gray-600">Amount of Sales Tax/ FED in sales tax mode (Excluding Further & Extra tax)</td>
+                    </tr>
+                    <tr>
+                      <td className="px-4 py-3 text-sm font-medium text-gray-900">salesTaxWithheldAtSource</td>
+                      <td className="px-4 py-3 text-sm text-gray-600">Number (Decimal)</td>
+                      <td className="px-4 py-3 text-sm">
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                          Required
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-600">0.00</td>
+                      <td className="px-4 py-3 text-sm text-gray-600">Sales Tax Withheld at source</td>
+                    </tr>
+                    <tr>
+                      <td className="px-4 py-3 text-sm font-medium text-gray-900">extraTax</td>
+                      <td className="px-4 py-3 text-sm text-gray-600">Number (Decimal)</td>
+                      <td className="px-4 py-3 text-sm">
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                          Optional*
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-600">0.00</td>
+                      <td className="px-4 py-3 text-sm text-gray-600">Any Extra Tax (if applicable)</td>
+                    </tr>
+                    <tr>
+                      <td className="px-4 py-3 text-sm font-medium text-gray-900">furtherTax</td>
+                      <td className="px-4 py-3 text-sm text-gray-600">Number (Decimal)</td>
+                      <td className="px-4 py-3 text-sm">
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                          Optional*
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-600">120.00</td>
+                      <td className="px-4 py-3 text-sm text-gray-600">Further Tax (if applicable)</td>
+                    </tr>
+                    <tr>
+                      <td className="px-4 py-3 text-sm font-medium text-gray-900">sroScheduleNo</td>
+                      <td className="px-4 py-3 text-sm text-gray-600">String</td>
+                      <td className="px-4 py-3 text-sm">
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                          Optional*
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-600">"SRO123"</td>
+                      <td className="px-4 py-3 text-sm text-gray-600">SRO Schedule No</td>
+                    </tr>
+                    <tr>
+                      <td className="px-4 py-3 text-sm font-medium text-gray-900">fedPayable</td>
+                      <td className="px-4 py-3 text-sm text-gray-600">Number (Decimal)</td>
+                      <td className="px-4 py-3 text-sm">
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                          Optional*
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-600">0.00</td>
+                      <td className="px-4 py-3 text-sm text-gray-600">Federal excise duty payable</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              
+              <div className="mt-4 text-sm text-gray-600">
+                <p><span className="font-medium">* Optional:</span> Field is optional but recommended for better data quality</p>
+                <p><span className="font-medium">* Conditional:</span> Field is required only under specific conditions</p>
+                <p><span className="font-medium">* Sandbox Only:</span> Field is only required for sandbox/testing environment</p>
+              </div>
+            </div>
           </div>
         </CardContent>
       </Card>
