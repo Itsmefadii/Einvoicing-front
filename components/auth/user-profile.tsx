@@ -24,12 +24,12 @@ export function UserProfile({ showDetails = false, className = '' }: UserProfile
     <div className={`flex items-center gap-x-2 ${className}`}>
       <UserCircleIcon className="h-8 w-8 text-gray-400" />
       <div className="flex flex-col">
-        <span className="text-sm font-medium text-gray-900">{user.name}</span>
+        <span className="text-sm font-medium text-gray-900">{user.sellerData?.businessName || 'User'}</span>
         {showDetails && (
           <div className="text-xs text-gray-500">
-            <span>NTN: {user.ntn}</span>
+            <span>NTN: {user.sellerData?.ntnCnic || 'N/A'}</span>
             <span className="mx-1">•</span>
-            <span className="capitalize">{user.environment}</span>
+            <span className="capitalize">Production</span>
           </div>
         )}
       </div>

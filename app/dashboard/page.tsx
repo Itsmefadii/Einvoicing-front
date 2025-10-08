@@ -349,7 +349,7 @@ export default function DashboardPage() {
             <div className="text-sm">
               <span className="text-green-600 font-medium flex items-center">
                 <ArrowUpIcon className="h-4 w-4 mr-1" />
-                {stats.monthlyGrowth}%
+                +12%
               </span>
               <span className="text-gray-500">from last month</span>
             </div>

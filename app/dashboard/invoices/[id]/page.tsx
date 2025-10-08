@@ -261,7 +261,7 @@ export default function InvoiceViewPage({ params }: { params: { id: string } }) 
   const handlePrint = async () => {
     if (typeof window !== 'undefined' && invoice) {
       // Import QRCode dynamically
-      const QRCode = (await import('qrcode')).default;
+      const QRCode = (await import('qrcode')).default as any;
       
       // Create a new window for printing
       const printWindow = window.open('', '_blank', 'width=800,height=600')

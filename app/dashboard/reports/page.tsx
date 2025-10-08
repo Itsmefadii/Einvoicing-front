@@ -11,37 +11,110 @@ import {
   ArrowDownTrayIcon,
   CalendarIcon,
   BuildingOfficeIcon,
-  UserGroupIcon,
-  ServerIcon,
-  SignalIcon
+  ArrowTrendingUpIcon,
+  ArrowTrendingDownIcon
 } from '@heroicons/react/24/outline';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/app/components/ui/card';
 import { Button } from '@/app/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/app/components/ui/select';
-import { dataService, DashboardData } from '@/lib/data-service';
+import { useAuth } from '@/lib/auth-context';
+
+// Type definitions for the API response
+interface MetricData {
+  value: number;
+  trend?: string;
+  detail?: string;
+}
+
+interface MonthlyData {
+  month: string;
+  invoices: number;
+  revenue: number;
+}
+
+interface TopPerformerData {
+  name: string;
+  quantity?: number;
+  revenue: number;
+  invoices?: number;
+  successRate?: number;
+}
+
+interface ReportsData {
+  totalInvoices: MetricData;
+  totalRevenue: MetricData;
+  fbrSuccessRate: MetricData;
+  activeSellers: MetricData | null;
+  monthlyInvoiceVolume: {
+    subtitle: string;
+    data: MonthlyData[];
+  };
+  topPerformers: {
+    subtitle: string;
+    data: TopPerformerData[];
+  };
+}
+
+interface ReportsResponse {
+  success: boolean;
+  message: string;
+  data: ReportsData;
+  timestamp: string;
+}
 
 export default function ReportsPage() {
-  const [reportData, setReportData] = useState<DashboardData | null>(null);
-  const [timeRange, setTimeRange] = useState('30');
+  const [reportData, setReportData] = useState<ReportsData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [selectedReport, setSelectedReport] = useState('overview');
+  const [error, setError] = useState<string | null>(null);
+  const { user } = useAuth();
+
+  // Check if user is admin (roleId 1) or seller (roleId 2)
+  const isAdmin = user?.roleId === 1;
+  const isSeller = user?.roleId === 2;
 
   useEffect(() => {
-    // Load data from service
-    const loadData = async () => {
-      setIsLoading(true);
+    const fetchReportsData = async () => {
       try {
-        const data = await dataService.getReportData(timeRange);
-        setReportData(data);
+        setIsLoading(true);
+        setError(null);
+
+        // Get authorization token from localStorage
+        const token = localStorage.getItem('authToken') || localStorage.getItem('token');
+        
+        if (!token) {
+          setError('No authorization token found. Please login again.');
+          return;
+        }
+
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
+        const response = await fetch(`${apiUrl}/invoice/reports`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+        });
+
+        if (response.ok) {
+          const data: ReportsResponse = await response.json();
+          if (data.success && data.data) {
+            setReportData(data.data);
+          } else {
+            setError(data.message || 'Failed to fetch reports data');
+          }
+        } else {
+          const errorData = await response.json();
+          setError(errorData.message || 'Failed to fetch reports data');
+        }
       } catch (error) {
-        console.error('Error loading report data:', error);
+        console.error('Error fetching reports data:', error);
+        setError('Error fetching reports data. Please try again.');
       } finally {
         setIsLoading(false);
       }
     };
 
-    loadData();
-  }, [timeRange]);
+    fetchReportsData();
+  }, []);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-PK', {
@@ -55,27 +128,27 @@ export default function ReportsPage() {
     return new Intl.NumberFormat('en-PK').format(num);
   };
 
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'success':
-        return <CheckCircleIcon className="h-4 w-4 text-green-500" />;
-      case 'warning':
-        return <ExclamationTriangleIcon className="h-4 w-4 text-yellow-500" />;
-      case 'error':
-        return <ExclamationTriangleIcon className="h-4 w-4 text-red-500" />;
-      default:
-        return <ClockIcon className="h-4 w-4 text-gray-500" />;
+  const getTrendIcon = (trend: string) => {
+    if (trend.includes('+') || trend.includes('Infinity')) {
+      return <ArrowTrendingUpIcon className="h-4 w-4 text-green-500" />;
+    } else if (trend.includes('-')) {
+      return <ArrowTrendingDownIcon className="h-4 w-4 text-red-500" />;
     }
+    return <ClockIcon className="h-4 w-4 text-gray-500" />;
+  };
+
+  const getTrendColor = (trend: string) => {
+    if (trend.includes('+') || trend.includes('Infinity')) {
+      return 'text-green-600';
+    } else if (trend.includes('-')) {
+      return 'text-red-600';
+    }
+    return 'text-gray-600';
   };
 
   const exportReport = async (format: 'pdf' | 'excel' | 'csv') => {
-    try {
-      const filename = await dataService.exportData(format);
-      alert(`Report exported successfully: ${filename}`);
-    } catch (error) {
-      console.error('Export failed:', error);
-      alert('Export failed. Please try again.');
-    }
+    // Placeholder for export functionality
+    alert(`Export ${format.toUpperCase()} functionality will be implemented soon.`);
   };
 
   if (isLoading) {
@@ -93,6 +166,23 @@ export default function ReportsPage() {
     );
   }
 
+  if (error) {
+    return (
+      <div className="text-center py-12">
+        <ExclamationTriangleIcon className="mx-auto h-12 w-12 text-red-400" />
+        <h3 className="mt-2 text-sm font-medium text-gray-900">Error loading reports</h3>
+        <p className="mt-1 text-sm text-gray-500">{error}</p>
+        <Button 
+          onClick={() => window.location.reload()} 
+          className="mt-4"
+          variant="outline"
+        >
+          Try Again
+        </Button>
+      </div>
+    );
+  }
+
   if (!reportData) {
     return (
       <div className="text-center py-12">
@@ -104,32 +194,32 @@ export default function ReportsPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {/* Page header */}
       <div className="sm:flex sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Reports & Analytics</h1>
-          <p className="mt-2 text-sm text-gray-700">
-            Comprehensive insights into your digital invoicing platform performance.
+        <div className="space-y-3">
+          <div className="flex items-center space-x-4">
+            <div className="w-12 h-12 bg-gradient-to-br from-slate-700 to-slate-900 rounded-2xl flex items-center justify-center shadow-lg">
+              <ChartBarIcon className="h-7 w-7 text-white" />
+            </div>
+            <div>
+              <h1 className="text-3xl font-bold gradient-text">Reports & Analytics</h1>
+              <p className="text-slate-500 font-medium">Performance insights and metrics</p>
+            </div>
+          </div>
+          <p className="text-slate-600 max-w-2xl leading-relaxed">
+            {isAdmin 
+              ? 'Comprehensive insights into the digital invoicing platform performance across all sellers.'
+              : 'Your personal invoicing performance and analytics dashboard.'
+            }
           </p>
         </div>
-        <div className="mt-4 sm:mt-0 flex gap-3">
-          <Select value={timeRange} onValueChange={setTimeRange}>
-            <SelectTrigger className="w-32">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="7">Last 7 days</SelectItem>
-              <SelectItem value="30">Last 30 days</SelectItem>
-              <SelectItem value="90">Last 90 days</SelectItem>
-              <SelectItem value="365">Last year</SelectItem>
-            </SelectContent>
-          </Select>
-          <Button onClick={() => exportReport('pdf')} variant="outline" size="sm">
+        <div className="mt-6 sm:mt-0 flex gap-3">
+          <Button onClick={() => exportReport('pdf')} variant="outline" size="sm" className="btn-professional">
             <ArrowDownTrayIcon className="h-4 w-4 mr-2" />
             Export PDF
           </Button>
-          <Button onClick={() => exportReport('excel')} variant="outline" size="sm">
+          <Button onClick={() => exportReport('excel')} variant="outline" size="sm" className="btn-professional">
             <ArrowDownTrayIcon className="h-4 w-4 mr-2" />
             Export Excel
           </Button>
@@ -138,57 +228,88 @@ export default function ReportsPage() {
 
       {/* Key Metrics */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Invoices</CardTitle>
-            <DocumentTextIcon className="h-4 w-4 text-muted-foreground" />
+        <Card className="card-professional border-0 shadow-professional bg-gradient-to-br from-white to-slate-50">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+            <CardTitle className="text-sm font-semibold text-slate-600">Total Invoices</CardTitle>
+            <div className="w-10 h-10 bg-slate-100 rounded-xl flex items-center justify-center">
+              <DocumentTextIcon className="h-5 w-5 text-slate-600" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatNumber(reportData.stats.totalInvoices)}</div>
-            <p className="text-xs text-muted-foreground">
-              +12% from last month
+            <div className="text-3xl font-bold text-slate-900 mb-2">{formatNumber(reportData.totalInvoices.value)}</div>
+            <div className="flex items-center space-x-2">
+              {getTrendIcon(reportData.totalInvoices.trend || '')}
+              <p className={`text-sm font-medium ${getTrendColor(reportData.totalInvoices.trend || '')}`}>
+                {reportData.totalInvoices.trend || 'No trend data'}
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="card-professional border-0 shadow-professional bg-gradient-to-br from-white to-slate-50">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+            <CardTitle className="text-sm font-semibold text-slate-600">Total Revenue</CardTitle>
+            <div className="w-10 h-10 bg-emerald-100 rounded-xl flex items-center justify-center">
+              <CurrencyDollarIcon className="h-5 w-5 text-emerald-600" />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold text-slate-900 mb-2">{formatCurrency(reportData.totalRevenue.value)}</div>
+            <div className="flex items-center space-x-2">
+              {getTrendIcon(reportData.totalRevenue.trend || '')}
+              <p className={`text-sm font-medium ${getTrendColor(reportData.totalRevenue.trend || '')}`}>
+                {reportData.totalRevenue.trend || 'No trend data'}
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="card-professional border-0 shadow-professional bg-gradient-to-br from-white to-slate-50">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
+            <CardTitle className="text-sm font-semibold text-slate-600">FBR Success Rate</CardTitle>
+            <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center">
+              <CheckCircleIcon className="h-5 w-5 text-blue-600" />
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold text-slate-900 mb-2">{reportData.fbrSuccessRate.value.toFixed(1)}%</div>
+            <p className="text-sm text-slate-600 font-medium">
+              {reportData.fbrSuccessRate.detail || 'No detail available'}
             </p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
-            <CurrencyDollarIcon className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(reportData.stats.totalRevenue)}</div>
-            <p className="text-xs text-muted-foreground">
-              +8% from last month
-            </p>
-          </CardContent>
-        </Card>
+        {/* Show Active Sellers only for Admin */}
+        {isAdmin && reportData.activeSellers && (
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Active Sellers</CardTitle>
+              <BuildingOfficeIcon className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{reportData.activeSellers.value}</div>
+              <p className="text-xs text-muted-foreground">
+                {reportData.activeSellers.detail || 'No detail available'}
+              </p>
+            </CardContent>
+          </Card>
+        )}
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">FBR Success Rate</CardTitle>
-            <CheckCircleIcon className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{reportData.fbrStats.successRate}%</div>
-            <p className="text-xs text-muted-foreground">
-              {formatNumber(reportData.fbrStats.successful)} of {formatNumber(reportData.fbrStats.totalSubmissions)} successful
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Active Sellers</CardTitle>
-            <BuildingOfficeIcon className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{reportData.topSellers.length}</div>
-            <p className="text-xs text-muted-foreground">
-              +2 new this month
-            </p>
-          </CardContent>
-        </Card>
+        {/* Show a different metric for sellers if needed */}
+        {isSeller && !reportData.activeSellers && (
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">This Month</CardTitle>
+              <CalendarIcon className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{formatNumber(reportData.totalInvoices.value)}</div>
+              <p className="text-xs text-muted-foreground">
+                Invoices processed
+              </p>
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       {/* Charts and Detailed Analytics */}
@@ -197,11 +318,11 @@ export default function ReportsPage() {
         <Card>
           <CardHeader>
             <CardTitle>Monthly Invoice Volume</CardTitle>
-            <CardDescription>Invoice count and revenue trends over the last 6 months</CardDescription>
+            <CardDescription>{reportData.monthlyInvoiceVolume.subtitle}</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {reportData.monthlyTrends.map((data, index) => (
+              {reportData.monthlyInvoiceVolume.data.map((data, index) => (
                 <div key={data.month} className="flex items-center justify-between">
                   <div className="flex items-center space-x-2">
                     <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
@@ -217,28 +338,39 @@ export default function ReportsPage() {
           </CardContent>
         </Card>
 
-        {/* Top Sellers */}
+        {/* Top Performers */}
         <Card>
           <CardHeader>
-            <CardTitle>Top Performing Sellers</CardTitle>
-            <CardDescription>Sellers with highest invoice volume and revenue</CardDescription>
+            <CardTitle>
+              {isAdmin ? 'Top Performing Sellers' : 'Top Performing Products'}
+            </CardTitle>
+            <CardDescription>{reportData.topPerformers.subtitle}</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {reportData.topSellers.slice(0, 5).map((seller, index) => (
-                <div key={seller.name} className="flex items-center justify-between">
+              {reportData.topPerformers.data.slice(0, 5).map((performer, index) => (
+                <div key={performer.name} className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">
                     <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center">
                       <span className="text-xs font-medium">{index + 1}</span>
                     </div>
                     <div>
-                      <div className="text-sm font-medium">{seller.name}</div>
-                      <div className="text-xs text-gray-500">{formatNumber(seller.invoices)} invoices</div>
+                      <div className="text-sm font-medium truncate max-w-[200px]" title={performer.name}>
+                        {performer.name}
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        {isAdmin 
+                          ? `${formatNumber(performer.invoices || 0)} invoices`
+                          : `Qty: ${formatNumber(performer.quantity || 0)}`
+                        }
+                      </div>
                     </div>
                   </div>
                   <div className="text-right">
-                    <div className="text-sm font-medium">{formatCurrency(seller.revenue)}</div>
-                    <div className="text-xs text-green-600">{seller.successRate}% success</div>
+                    <div className="text-sm font-medium">{formatCurrency(performer.revenue)}</div>
+                    {isAdmin && performer.successRate !== undefined && (
+                      <div className="text-xs text-green-600">{performer.successRate}% success</div>
+                    )}
                   </div>
                 </div>
               ))}
@@ -247,46 +379,39 @@ export default function ReportsPage() {
         </Card>
       </div>
 
-      {/* Recent Activity */}
+      {/* Summary Section */}
       <Card>
         <CardHeader>
-          <CardTitle>Recent Activity</CardTitle>
-          <CardDescription>Latest activities and system events</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {reportData.recentActivity.map((activity) => (
-              <div key={activity.id} className="flex items-center space-x-3">
-                {getStatusIcon(activity.status)}
-                <div className="flex-1">
-                  <div className="text-sm font-medium">{activity.message}</div>
-                  <div className="text-xs text-gray-500">{activity.timestamp}</div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* FBR Statistics */}
-      <Card>
-        <CardHeader>
-          <CardTitle>FBR Submission Statistics</CardTitle>
-          <CardDescription>Detailed breakdown of FBR submission performance</CardDescription>
+          <CardTitle>Performance Summary</CardTitle>
+          <CardDescription>
+            {isAdmin 
+              ? 'Overall platform performance and key insights'
+              : 'Your invoicing performance summary and insights'
+            }
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="text-center">
-              <div className="text-2xl font-bold text-green-600">{formatNumber(reportData.fbrStats.successful)}</div>
-              <div className="text-sm text-gray-600">Successful Submissions</div>
+            <div className="text-center p-4 bg-blue-50 rounded-lg">
+              <div className="text-2xl font-bold text-blue-600">{formatNumber(reportData.totalInvoices.value)}</div>
+              <div className="text-sm text-gray-600">Total Invoices</div>
+              <div className="text-xs text-gray-500 mt-1">
+                {reportData.totalInvoices.trend || 'No trend data'}
+              </div>
             </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-red-600">{formatNumber(reportData.fbrStats.failed)}</div>
-              <div className="text-sm text-gray-600">Failed Submissions</div>
+            <div className="text-center p-4 bg-green-50 rounded-lg">
+              <div className="text-2xl font-bold text-green-600">{formatCurrency(reportData.totalRevenue.value)}</div>
+              <div className="text-sm text-gray-600">Total Revenue</div>
+              <div className="text-xs text-gray-500 mt-1">
+                {reportData.totalRevenue.trend || 'No trend data'}
+              </div>
             </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-blue-600">{reportData.fbrStats.successRate}%</div>
-              <div className="text-sm text-gray-600">Success Rate</div>
+            <div className="text-center p-4 bg-purple-50 rounded-lg">
+              <div className="text-2xl font-bold text-purple-600">{reportData.fbrSuccessRate.value.toFixed(1)}%</div>
+              <div className="text-sm text-gray-600">FBR Success Rate</div>
+              <div className="text-xs text-gray-500 mt-1">
+                {reportData.fbrSuccessRate.detail || 'No detail available'}
+              </div>
             </div>
           </div>
         </CardContent>

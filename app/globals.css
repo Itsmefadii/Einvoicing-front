@@ -10,20 +10,20 @@
     --card-foreground: 222.2 84% 4.9%;
     --popover: 0 0% 100%;
     --popover-foreground: 222.2 84% 4.9%;
-    --primary: 221.2 83.2% 53.3%;
+    --primary: 215 25% 27%;
     --primary-foreground: 210 40% 98%;
-    --secondary: 210 40% 96%;
+    --secondary: 210 40% 98%;
     --secondary-foreground: 222.2 84% 4.9%;
-    --muted: 210 40% 96%;
+    --muted: 210 40% 98%;
     --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 210 40% 96%;
+    --accent: 210 40% 98%;
     --accent-foreground: 222.2 84% 4.9%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
     --border: 214.3 31.8% 91.4%;
     --input: 214.3 31.8% 91.4%;
-    --ring: 221.2 83.2% 53.3%;
-    --radius: 0.5rem;
+    --ring: 215 25% 27%;
+    --radius: 0.75rem;
   }
 
   .dark {
@@ -33,7 +33,7 @@
     --card-foreground: 210 40% 98%;
     --popover: 222.2 84% 4.9%;
     --popover-foreground: 210 40% 98%;
-    --primary: 217.2 91.2% 59.8%;
+    --primary: 215 25% 60%;
     --primary-foreground: 222.2 84% 4.9%;
     --secondary: 217.2 32.6% 17.5%;
     --secondary-foreground: 210 40% 98%;
@@ -45,7 +45,7 @@
     --destructive-foreground: 210 40% 98%;
     --border: 217.2 32.6% 17.5%;
     --input: 217.2 32.6% 17.5%;
-    --ring: 224.3 76.3% 94.1%;
+    --ring: 215 25% 60%;
   }
 }
 
@@ -54,6 +54,69 @@
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground font-sans antialiased;
+  }
+  
+  /* Professional scrollbar styling */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  
+  ::-webkit-scrollbar-track {
+    background: hsl(var(--muted));
+    border-radius: 4px;
+  }
+  
+  ::-webkit-scrollbar-thumb {
+    background: hsl(var(--muted-foreground) / 0.3);
+    border-radius: 4px;
+    border: 1px solid hsl(var(--muted));
+  }
+  
+  ::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--muted-foreground) / 0.5);
+  }
+  
+  /* Professional focus styles */
+  *:focus-visible {
+    @apply outline-none ring-2 ring-primary ring-offset-2 ring-offset-background;
+  }
+  
+  /* Professional button hover effects */
+  .btn-professional {
+    @apply transition-all duration-200 ease-in-out;
+  }
+  
+  .btn-professional:hover {
+    @apply transform scale-[1.02] shadow-lg;
+  }
+  
+  /* Professional card hover effects */
+  .card-professional {
+    @apply transition-all duration-300 ease-in-out;
+  }
+  
+  .card-professional:hover {
+    @apply shadow-xl transform translate-y-[-4px];
+  }
+  
+  /* Professional glass effect */
+  .glass-effect {
+    @apply bg-white/80 backdrop-blur-md border border-white/20;
+  }
+  
+  /* Professional gradient text */
+  .gradient-text {
+    @apply bg-gradient-to-r from-slate-700 to-slate-900 bg-clip-text text-transparent;
+  }
+  
+  /* Professional shadow system */
+  .shadow-professional {
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  }
+  
+  .shadow-professional-lg {
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
   }
 }

@@ -13,8 +13,8 @@ export default function EnvironmentBanner() {
   useEffect(() => {
     // Determine environment based on fbrTokenType from user data
     const userData = user?.sellerData;
-    if (userData?.fbrTokenType) {
-      const tokenType = userData.fbrTokenType.toLowerCase();
+    if ((userData as any)?.fbrTokenType) {
+      const tokenType = (userData as any).fbrTokenType.toLowerCase();
       if (tokenType === 'production') {
         setEnvironment('production');
       } else if (tokenType === 'sandbox') {

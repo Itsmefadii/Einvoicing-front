@@ -73,6 +73,7 @@ export default function CreateInvoicePage() {
   const [isLoadingHsCodes, setIsLoadingHsCodes] = useState(false);
   const [hsCodeSearch, setHsCodeSearch] = useState<{ [itemId: string]: string }>({});
   const [showHsCodeDropdown, setShowHsCodeDropdown] = useState<{ [itemId: string]: boolean }>({});
+  const [isLoadingUom, setIsLoadingUom] = useState<{ [itemId: string]: boolean }>({});
   const [saleTypes, setSaleTypes] = useState<SaleType[]>([]);
   const [isLoadingSaleTypes, setIsLoadingSaleTypes] = useState(false);
   const [showModal, setShowModal] = useState(false);
@@ -177,6 +178,40 @@ export default function CreateInvoicePage() {
     return hsCodes.filter(hsCode => 
       hsCode.hsCode.toLowerCase().includes(searchTerm.toLowerCase())
     );
+  };
+
+  // Fetch UOM for HS Code
+  const fetchUomForHsCode = async (hsCode: string, itemId: string) => {
+    if (!hsCode.trim()) return;
+    
+    setIsLoadingUom(prev => ({ ...prev, [itemId]: true }));
+    
+    try {
+      const token = localStorage.getItem('authToken') || localStorage.getItem('token');
+      if (!token) return;
+
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
+      const response = await fetch(`${apiUrl}/system-configs/hs-uoms/${hsCode}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && data.data && data.data.length > 0) {
+          // Auto-fill UOM with the first result's description
+          const uomDescription = data.data[0].description;
+          updateItem(itemId, 'uoM', uomDescription);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching UOM for HS Code:', error);
+    } finally {
+      setIsLoadingUom(prev => ({ ...prev, [itemId]: false }));
+    }
   };
 
   const [form, setForm] = useState<InvoiceForm>({
@@ -580,6 +615,10 @@ export default function CreateInvoicePage() {
                           setShowHsCodeDropdown(prev => ({ ...prev, [item.id]: true }));
                         }}
                         onBlur={() => {
+                          // Fetch UOM when user finishes typing HS Code
+                          if (item.hsCode.trim()) {
+                            fetchUomForHsCode(item.hsCode, item.id);
+                          }
                           setTimeout(() => {
                             setShowHsCodeDropdown(prev => ({ ...prev, [item.id]: false }));
                           }, 150);
@@ -600,6 +639,8 @@ export default function CreateInvoicePage() {
                                   e.preventDefault();
                                   updateItem(item.id, 'hsCode', hsCode.hsCode);
                                   setShowHsCodeDropdown(prev => ({ ...prev, [item.id]: false }));
+                                  // Fetch UOM for selected HS Code
+                                  fetchUomForHsCode(hsCode.hsCode, item.id);
                                 }}
                               >
                                 {hsCode.hsCode}
@@ -613,21 +654,19 @@ export default function CreateInvoicePage() {
                     </div>
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">UoM</label>
-                      <select
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        UoM
+                        {isLoadingUom[item.id] && (
+                          <span className="ml-2 text-xs text-blue-600">Loading...</span>
+                        )}
+                      </label>
+                      <Input
                         value={item.uoM}
                         onChange={(e) => updateItem(item.id, 'uoM', e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="Enter UoM"
                         required
-                      >
-                        <option value="">Select UoM</option>
-                        <option value="PCS">PCS</option>
-                        <option value="KG">KG</option>
-                        <option value="LTR">LTR</option>
-                        <option value="MTR">MTR</option>
-                        <option value="SQM">SQM</option>
-                        <option value="CBM">CBM</option>
-                      </select>
+                        disabled={isLoadingUom[item.id]}
+                      />
                     </div>
                   </div>
 

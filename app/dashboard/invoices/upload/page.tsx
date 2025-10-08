@@ -60,6 +60,11 @@ export default function UploadInvoicePage() {
       
       // Process each file immediately with real API call
       newFiles.forEach(file => processFileWithAPI(file.id, selectedFiles[0]));
+      
+      // Reset the file input to allow selecting the same file again
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
     }
   };
 
@@ -92,6 +97,11 @@ export default function UploadInvoicePage() {
       
       // Process each file immediately with real API call
       newFiles.forEach(file => processFileWithAPI(file.id, droppedFiles[0]));
+      
+      // Reset the file input to allow selecting the same file again
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
     }
   };
 
@@ -186,8 +196,39 @@ export default function UploadInvoicePage() {
     }
   };
 
+  const retryUpload = (fileId: string) => {
+    const file = files.find(f => f.id === fileId);
+    if (file) {
+      // Reset status to uploading
+      setFiles(prev => prev.map(f => 
+        f.id === fileId 
+          ? { ...f, status: 'uploading', progress: 0, error: undefined }
+          : f
+      ));
+      
+      // Find the original file and retry
+      // Note: We can't get the original File object back, so we'll need to ask user to re-select
+      // For now, we'll just reset the status and show a message
+      setTimeout(() => {
+        setFiles(prev => prev.map(f => 
+          f.id === fileId 
+            ? { ...f, status: 'error', error: 'Please re-select the file to retry upload' }
+            : f
+        ));
+      }, 1000);
+    }
+  };
+
   const removeFile = (fileId: string) => {
     setFiles(prev => prev.filter(file => file.id !== fileId));
+  };
+
+  const clearAllFiles = () => {
+    setFiles([]);
+    // Also reset the file input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
   };
 
   const downloadTemplate = () => {
@@ -338,8 +379,21 @@ INV-2024-002,2024-06-16,XYZ Corporation,2345678,2345678901234,Consulting Service
       {files.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle>Uploaded Files</CardTitle>
-            <CardDescription>Track the progress of your file uploads</CardDescription>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle>Uploaded Files</CardTitle>
+                <CardDescription>Track the progress of your file uploads</CardDescription>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={clearAllFiles}
+                className="text-red-600 hover:text-red-700 hover:bg-red-50"
+              >
+                <XMarkIcon className="h-4 w-4 mr-2" />
+                Clear All
+              </Button>
+            </div>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
@@ -364,6 +418,17 @@ INV-2024-002,2024-06-16,XYZ Corporation,2345678,2345678901234,Consulting Service
                           <p className="text-xs text-gray-500">{file.progress}%</p>
                         )}
                       </div>
+                      {file.status === 'error' && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => retryUpload(file.id)}
+                          className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                        >
+                          Retry
+                        </Button>
+                      )}
                       <Button
                         type="button"
                         variant="outline"

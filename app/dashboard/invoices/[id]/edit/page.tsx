@@ -69,6 +69,7 @@ export default function EditInvoicePage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [saleTypes, setSaleTypes] = useState<SaleType[]>([]);
   const [isLoadingSaleTypes, setIsLoadingSaleTypes] = useState(false);
+  const [isLoadingUom, setIsLoadingUom] = useState<{ [itemId: string]: boolean }>({});
 
   // Check permissions on component mount
   useEffect(() => {
@@ -120,6 +121,40 @@ export default function EditInvoicePage() {
 
     fetchSaleTypes();
   }, []);
+
+  // Fetch UOM for HS Code
+  const fetchUomForHsCode = async (hsCode: string, itemId: string) => {
+    if (!hsCode.trim()) return;
+    
+    setIsLoadingUom(prev => ({ ...prev, [itemId]: true }));
+    
+    try {
+      const token = localStorage.getItem('authToken') || localStorage.getItem('token');
+      if (!token) return;
+
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
+      const response = await fetch(`${apiUrl}/system-configs/hs-uoms/${hsCode}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && data.data && data.data.length > 0) {
+          // Auto-fill UOM with the first result's description
+          const uomDescription = data.data[0].description;
+          updateItem(itemId, 'uoM', uomDescription);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching UOM for HS Code:', error);
+    } finally {
+      setIsLoadingUom(prev => ({ ...prev, [itemId]: false }));
+    }
+  };
 
   const [form, setForm] = useState<InvoiceForm>({
     invoiceRefNo: '',
@@ -607,24 +642,29 @@ export default function EditInvoicePage() {
                       <Input
                         value={item.hsCode}
                         onChange={(e) => updateItem(item.id, 'hsCode', e.target.value)}
+                        onBlur={() => {
+                          // Fetch UOM when user finishes typing HS Code
+                          if (item.hsCode.trim()) {
+                            fetchUomForHsCode(item.hsCode, item.id);
+                          }
+                        }}
                         placeholder="HS Code"
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">UoM</label>
-                      <select
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        UoM
+                        {isLoadingUom[item.id] && (
+                          <span className="ml-2 text-xs text-blue-600">Loading...</span>
+                        )}
+                      </label>
+                      <Input
                         value={item.uoM}
                         onChange={(e) => updateItem(item.id, 'uoM', e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="Enter UoM"
                         required
-                      >
-                        <option value="PCS">PCS</option>
-                        <option value="KG">KG</option>
-                        <option value="LTR">LTR</option>
-                        <option value="MTR">MTR</option>
-                        <option value="SQM">SQM</option>
-                        <option value="CBM">CBM</option>
-                      </select>
+                        disabled={isLoadingUom[item.id]}
+                      />
                     </div>
                   </div>
 
