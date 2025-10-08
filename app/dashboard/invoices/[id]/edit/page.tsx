@@ -70,6 +70,7 @@ export default function EditInvoicePage() {
   const [saleTypes, setSaleTypes] = useState<SaleType[]>([]);
   const [isLoadingSaleTypes, setIsLoadingSaleTypes] = useState(false);
   const [isLoadingUom, setIsLoadingUom] = useState<{ [itemId: string]: boolean }>({});
+  const [redirectToInvoiceId, setRedirectToInvoiceId] = useState<string | null>(null);
 
   // Check permissions on component mount
   useEffect(() => {
@@ -405,6 +406,22 @@ export default function EditInvoicePage() {
       const data = await response.json();
 
       if (response.ok && data.success) {
+        // Check if the response contains a new invoice ID
+        if (data.data && data.data.invoice && data.data.invoice.id) {
+          const newInvoiceId = data.data.invoice.id;
+          const currentInvoiceId = params.id;
+          
+          console.log('Current invoice ID:', currentInvoiceId);
+          console.log('New invoice ID from API:', newInvoiceId);
+          
+          // If the invoice ID changed, set it for redirect after modal
+          if (newInvoiceId.toString() !== currentInvoiceId.toString()) {
+            console.log('Invoice ID changed, will redirect to:', `/dashboard/invoices/${newInvoiceId}`);
+            setRedirectToInvoiceId(newInvoiceId.toString());
+          }
+        }
+        
+        // Always show success modal first
         setShowSuccessModal(true);
       } else {
         const errorMessage = data.message || data.error || 'Failed to update invoice';
@@ -420,7 +437,16 @@ export default function EditInvoicePage() {
 
   const handleSuccessModalClose = () => {
     setShowSuccessModal(false);
-    router.push(`/dashboard/invoices/${params.id}`);
+    
+    // If there's a redirect ID set, redirect to the new invoice
+    if (redirectToInvoiceId) {
+      console.log('Redirecting to new invoice ID:', redirectToInvoiceId);
+      router.push(`/dashboard/invoices/${redirectToInvoiceId}`);
+      setRedirectToInvoiceId(null); // Clear the redirect ID
+    } else {
+      // Otherwise, redirect to the current invoice
+      router.push(`/dashboard/invoices/${params.id}`);
+    }
   };
 
   const { subtotal, taxAmount, total } = calculateTotals();
@@ -911,7 +937,10 @@ export default function EditInvoicePage() {
         isOpen={showSuccessModal}
         onClose={handleSuccessModalClose}
         title="Invoice Updated Successfully!"
-        message="Your invoice has been updated successfully. You will be redirected to the invoice details page."
+        message={redirectToInvoiceId 
+          ? `Your invoice has been updated successfully. You will be redirected to the updated invoice.`
+          : "Your invoice has been updated successfully. You will be redirected to the invoice details page."
+        }
         buttonText="Continue"
         onButtonClick={handleSuccessModalClose}
       />

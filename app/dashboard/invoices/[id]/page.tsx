@@ -1023,7 +1023,7 @@ export default function InvoiceViewPage({ params }: { params: { id: string } }) 
           )}
         </div>
         <div className="mt-4 sm:mt-0 space-x-3 no-print">
-          {isSeller && (invoice.status === 'Pending' || invoice.status === 'Invalid') && (
+          {isSeller && (invoice.status === 'Pending' || invoice.status === 'pending' || invoice.status === 'Invalid') && (
             <Link
               href={`/dashboard/invoices/${invoice.id}/edit`}
               className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"

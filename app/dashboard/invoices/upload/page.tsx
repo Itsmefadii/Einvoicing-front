@@ -178,6 +178,22 @@ export default function UploadInvoicePage() {
             ? { ...f, status: 'completed', progress: 100 }
             : f
         ));
+
+        // Update status based on response
+        if (response.ok && data.success) {
+          setFiles(prev => prev.map(f => 
+            f.id === fileId 
+              ? { ...f, status: 'completed', progress: 100 }
+              : f
+          ));
+        } else {
+          const errorMessage = data.message || data.error || 'Upload failed';
+          setFiles(prev => prev.map(f => 
+            f.id === fileId 
+              ? { ...f, status: 'error', error: errorMessage }
+              : f
+          ));
+        }
       } else {
         const errorMessage = data.message || data.error || 'Upload failed';
         setFiles(prev => prev.map(f => 

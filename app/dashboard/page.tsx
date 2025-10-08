@@ -57,6 +57,7 @@ interface DashboardStats {
   totalInvoices: number;
   totalUsers: number;
   totalRevenue: number;
+  lastMonthRevenue: number;
   successRate: number;
   pendingInvoices: number;
   submittedInvoices: number;
@@ -84,6 +85,7 @@ export default function DashboardPage() {
     totalInvoices: 0,
     totalUsers: 0,
     totalRevenue: 0,
+    lastMonthRevenue: 0,
     successRate: 0,
     pendingInvoices: 0,
     submittedInvoices: 0,
@@ -95,6 +97,7 @@ export default function DashboardPage() {
   const totalInvoicesCount = useCountUp(stats.totalInvoices, 3500, 0);
   const totalUsersCount = useCountUp(stats.totalUsers, 3500, 0);
   const totalRevenueCount = useCountUp(stats.totalRevenue, 3500, 0);
+  const lastMonthRevenue = useCountUp(stats.lastMonthRevenue, 3500, 0);
   const successRateCount = useCountUp(stats.successRate, 3500, 0);
   const pendingInvoicesCount = useCountUp(stats.pendingInvoices, 3500, 0);
   const submittedInvoicesCount = useCountUp(stats.submittedInvoices, 3500, 0);
@@ -349,7 +352,7 @@ export default function DashboardPage() {
             <div className="text-sm">
               <span className="text-green-600 font-medium flex items-center">
                 <ArrowUpIcon className="h-4 w-4 mr-1" />
-                +12%
+                {lastMonthRevenue.count}%
               </span>
               <span className="text-gray-500">from last month</span>
             </div>
