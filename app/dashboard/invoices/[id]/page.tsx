@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
-import { PrinterIcon, PaperAirplaneIcon, CheckCircleIcon, XCircleIcon } from '@heroicons/react/24/outline'
+import { PrinterIcon, PaperAirplaneIcon, CheckCircleIcon, XCircleIcon, PencilIcon } from '@heroicons/react/24/outline'
 import { useAuth } from '@/lib/auth-context'
 import InvoicePrint from '@/app/components/invoice-print'
 
@@ -1023,6 +1023,16 @@ export default function InvoiceViewPage({ params }: { params: { id: string } }) 
           )}
         </div>
         <div className="mt-4 sm:mt-0 space-x-3 no-print">
+          {isSeller && (invoice.status === 'Pending' || invoice.status === 'Invalid') && (
+            <Link
+              href={`/dashboard/invoices/${invoice.id}/edit`}
+              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              title="Edit this invoice (only available for sellers and pending/invalid invoices)"
+            >
+              <PencilIcon className="h-4 w-4 mr-2" />
+              Edit Invoice
+            </Link>
+          )}
           {isSeller && (invoice.status === 'valid' || invoice.status === 'pending') && (
             <button
               onClick={handlePostInvoice}

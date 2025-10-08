@@ -232,17 +232,11 @@ export default function UploadInvoicePage() {
   };
 
   const downloadTemplate = () => {
-    const csvContent = `Invoice No,Date,Customer Name,Customer NTN,CNIC,Item Description,HS Code,Qty,Unit Price,Tax %,Tax Amount,Total
-INV-2024-001,2024-06-15,ABC Company Ltd,1234567,1234567890123,Software Development Services,8514.40,1,50000,15,7500,57500
-INV-2024-002,2024-06-16,XYZ Corporation,2345678,2345678901234,Consulting Services,9983.10,2,25000,15,7500,57500`;
-    
-    const blob = new Blob([csvContent], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'invoice_template.csv';
-    a.click();
-    window.URL.revokeObjectURL(url);
+    // Create a link to download the Excel template from public/files folder
+    const link = document.createElement('a');
+    link.href = '/files/sample-invoice-data-new.xlsx';
+    link.download = 'invoice_template.xlsx';
+    link.click();
   };
 
   // Removed startBulkUpload function as requested
@@ -321,7 +315,7 @@ INV-2024-002,2024-06-16,XYZ Corporation,2345678,2345678901234,Consulting Service
         <div className="flex space-x-3">
           <Button variant="outline" onClick={downloadTemplate}>
             <DocumentArrowDownIcon className="h-4 w-4 mr-2" />
-            Download Template
+            Download Excel Template
           </Button>
         </div>
       </div>
@@ -477,7 +471,7 @@ INV-2024-002,2024-06-16,XYZ Corporation,2345678,2345678901234,Consulting Service
               <div>
                 <h3 className="font-medium text-gray-900 mb-2">1. Prepare Your File</h3>
                 <p className="text-sm text-gray-600">
-                  Use the provided template or ensure your file has the required columns:
+                  Download the Excel template above or ensure your file has the required columns:
                   Invoice No, Date, Customer Name, NTN, CNIC, Item Description, HS Code, Qty, Unit Price, Tax %, Tax Amount, Total
                 </p>
               </div>
