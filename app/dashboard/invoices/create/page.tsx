@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
 import { 
@@ -80,6 +80,10 @@ export default function CreateInvoicePage() {
   const [modalType, setModalType] = useState<'success' | 'error'>('success');
   const [modalMessage, setModalMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // Track API calls to prevent duplicates
+  const hasFetchedHsCodes = useRef(false);
+  const hasFetchedSaleTypes = useRef(false);
 
   // Check permissions on component mount
   useEffect(() => {
@@ -95,13 +99,27 @@ export default function CreateInvoicePage() {
 
   // Fetch HS codes
   useEffect(() => {
+    // Only fetch when auth is ready and user is available
+    if (authLoading || !user) {
+      return;
+    }
+
+    // Prevent duplicate API calls
+    if (hasFetchedHsCodes.current) {
+      console.log('Skipping HS codes API call - already fetched');
+      return;
+    }
+
     const fetchHsCodes = async () => {
       try {
         setIsLoadingHsCodes(true);
+        hasFetchedHsCodes.current = true; // Mark as fetched
+        
         const token = localStorage.getItem('authToken') || localStorage.getItem('token');
         
         if (!token) {
           console.error('No authorization token found');
+          hasFetchedHsCodes.current = false; // Reset on error
           return;
         }
 
@@ -118,29 +136,46 @@ export default function CreateInvoicePage() {
           const data = await response.json();
           if (data.success && data.data) {
             setHsCodes(data.data);
+            console.log('HS codes fetched successfully');
           }
         } else {
           console.error('Failed to fetch HS codes:', response.status);
+          hasFetchedHsCodes.current = false; // Reset on error
         }
       } catch (error) {
         console.error('Error fetching HS codes:', error);
+        hasFetchedHsCodes.current = false; // Reset on error
       } finally {
         setIsLoadingHsCodes(false);
       }
     };
 
     fetchHsCodes();
-  }, []);
+  }, [authLoading, user]);
 
   // Fetch Sale Types
   useEffect(() => {
+    // Only fetch when auth is ready and user is available
+    if (authLoading || !user) {
+      return;
+    }
+
+    // Prevent duplicate API calls
+    if (hasFetchedSaleTypes.current) {
+      console.log('Skipping Sale Types API call - already fetched');
+      return;
+    }
+
     const fetchSaleTypes = async () => {
       try {
         setIsLoadingSaleTypes(true);
+        hasFetchedSaleTypes.current = true; // Mark as fetched
+        
         const token = localStorage.getItem('authToken') || localStorage.getItem('token');
         
         if (!token) {
           console.error('No authorization token found');
+          hasFetchedSaleTypes.current = false; // Reset on error
           return;
         }
 
@@ -157,19 +192,22 @@ export default function CreateInvoicePage() {
           const data = await response.json();
           if (data.success && data.data) {
             setSaleTypes(data.data);
+            console.log('Sale types fetched successfully');
           }
         } else {
           console.error('Failed to fetch sale types:', response.status);
+          hasFetchedSaleTypes.current = false; // Reset on error
         }
       } catch (error) {
         console.error('Error fetching sale types:', error);
+        hasFetchedSaleTypes.current = false; // Reset on error
       } finally {
         setIsLoadingSaleTypes(false);
       }
     };
 
     fetchSaleTypes();
-  }, []);
+  }, [authLoading, user]);
 
   // Filter HS codes based on search
   const getFilteredHsCodes = (itemId: string) => {

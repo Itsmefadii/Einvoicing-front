@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { 
@@ -143,6 +143,9 @@ export default function DashboardPage() {
   ]);
 
   const [isLoading, setIsLoading] = useState(true);
+  
+  // Track API call to prevent duplicates
+  const hasFetchedStats = useRef(false);
 
   useEffect(() => {
     // Check for access denied error
@@ -150,12 +153,27 @@ export default function DashboardPage() {
       setShowAccessDenied(true);
     }
 
+    // Only fetch when user is available
+    if (!user) {
+      return;
+    }
+
+    // Prevent duplicate API calls
+    if (hasFetchedStats.current) {
+      console.log('Skipping Dashboard Stats API call - already fetched');
+      return;
+    }
+
     // Fetch dashboard stats
     const fetchDashboardStats = async () => {
       try {
+        setIsLoading(true);
+        hasFetchedStats.current = true; // Mark as fetched
+        
         const token = localStorage.getItem('token');
         if (!token) {
           setIsLoading(false);
+          hasFetchedStats.current = false; // Reset on error
           return;
         }
 
@@ -171,17 +189,21 @@ export default function DashboardPage() {
           const data = await response.json();
           if (data.success && data.data) {
             setStats(data.data);
+            console.log('Dashboard stats fetched successfully');
           }
+        } else {
+          hasFetchedStats.current = false; // Reset on error
         }
       } catch (error) {
         console.error('Error fetching dashboard stats:', error);
+        hasFetchedStats.current = false; // Reset on error
       } finally {
         setIsLoading(false);
       }
     };
 
     fetchDashboardStats();
-  }, [searchParams]);
+  }, [searchParams, user]);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-PK', {

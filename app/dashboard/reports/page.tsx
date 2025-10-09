@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { 
   ChartBarIcon, 
   DocumentTextIcon, 
@@ -66,22 +66,38 @@ export default function ReportsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { user } = useAuth();
+  
+  // Track API call to prevent duplicates
+  const hasFetchedReports = useRef(false);
 
   // Check if user is admin (roleId 1) or seller (roleId 2)
   const isAdmin = user?.roleId === 1;
   const isSeller = user?.roleId === 2;
 
   useEffect(() => {
+    // Only fetch when user is available
+    if (!user) {
+      return;
+    }
+
+    // Prevent duplicate API calls
+    if (hasFetchedReports.current) {
+      console.log('Skipping Reports API call - already fetched');
+      return;
+    }
+
     const fetchReportsData = async () => {
       try {
         setIsLoading(true);
         setError(null);
+        hasFetchedReports.current = true; // Mark as fetched
 
         // Get authorization token from localStorage
         const token = localStorage.getItem('authToken') || localStorage.getItem('token');
         
         if (!token) {
           setError('No authorization token found. Please login again.');
+          hasFetchedReports.current = false; // Reset on error
           return;
         }
 
@@ -98,23 +114,27 @@ export default function ReportsPage() {
           const data: ReportsResponse = await response.json();
           if (data.success && data.data) {
             setReportData(data.data);
+            console.log('Reports data fetched successfully');
           } else {
             setError(data.message || 'Failed to fetch reports data');
+            hasFetchedReports.current = false; // Reset on error
           }
         } else {
           const errorData = await response.json();
           setError(errorData.message || 'Failed to fetch reports data');
+          hasFetchedReports.current = false; // Reset on error
         }
       } catch (error) {
         console.error('Error fetching reports data:', error);
         setError('Error fetching reports data. Please try again.');
+        hasFetchedReports.current = false; // Reset on error
       } finally {
         setIsLoading(false);
       }
     };
 
     fetchReportsData();
-  }, []);
+  }, [user]);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-PK', {

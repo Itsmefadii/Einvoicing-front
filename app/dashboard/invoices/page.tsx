@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/lib/auth-context';
 import { 
@@ -78,14 +78,29 @@ export default function InvoicesPage() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteInvoiceId, setDeleteInvoiceId] = useState<number | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  
+  // Track if we've already fetched invoices to prevent duplicate calls
+  const hasFetchedInvoices = useRef(false);
 
   console.log('InvoicesPage rendered - User:', user, 'AuthLoading:', authLoading);
 
   // Fetch invoices from API
   useEffect(() => {
+    // Only fetch when auth is ready and user is available
+    if (authLoading || !user) {
+      return;
+    }
+
+    // Prevent duplicate API calls
+    if (hasFetchedInvoices.current) {
+      console.log('Skipping API call - already fetched');
+      return;
+    }
+
     const fetchInvoices = async () => {
       try {
         setIsLoading(true);
+        hasFetchedInvoices.current = true; // Mark as fetched
         
         // Get authorization token from localStorage
         const token = localStorage.getItem('authToken') || localStorage.getItem('token');
@@ -95,6 +110,7 @@ export default function InvoicesPage() {
           setInvoices([]);
           setFilteredInvoices([]);
           setIsLoading(false);
+          hasFetchedInvoices.current = false; // Reset on error
           return;
         }
         
@@ -134,13 +150,14 @@ export default function InvoicesPage() {
         // Fallback to empty array if API fails
         setInvoices([]);
         setFilteredInvoices([]);
+        hasFetchedInvoices.current = false; // Reset on error
       } finally {
         setIsLoading(false);
       }
     };
 
     fetchInvoices();
-  }, []);
+  }, [authLoading, user]); // Depend on auth state
 
   // Filter invoices based on search and status
   useEffect(() => {
