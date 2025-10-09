@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
+import { isProduction } from '@/lib/environment';
 import { 
   PlusIcon, 
   TrashIcon,
@@ -526,16 +527,18 @@ export default function CreateInvoicePage() {
                 />
               </div>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Scenario ID</label>
-                <Input
-                  value={form.scenarioId}
-                  onChange={(e) => setForm(prev => ({ ...prev, scenarioId: e.target.value }))}
-                  placeholder="Enter scenario ID (e.g., ABC123)"
-                />
+            {!isProduction() && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Scenario ID</label>
+                  <Input
+                    value={form.scenarioId}
+                    onChange={(e) => setForm(prev => ({ ...prev, scenarioId: e.target.value }))}
+                    placeholder="Enter scenario ID (e.g., ABC123)"
+                  />
+                </div>
               </div>
-            </div>
+            )}
           </CardContent>
         </Card>
 

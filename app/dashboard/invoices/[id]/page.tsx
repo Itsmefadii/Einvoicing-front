@@ -534,6 +534,7 @@ export default function InvoiceViewPage({ params }: { params: { id: string } }) 
           tax: invoice.items.reduce((sum, item) => {
             return sum + (parseFloat(item.salesTaxWithheldAtSource) || 0) + (parseFloat(item.extraTax) || 0) + (parseFloat(item.furtherTax) || 0)
           }, 0),
+          salesTaxApplicable: invoice.items.reduce((sum, item) => sum + (parseFloat(item.salesTaxApplicable) || 0), 0),
           total: parseFloat(invoice.totalAmount) || 0
         }
 
@@ -683,7 +684,7 @@ export default function InvoiceViewPage({ params }: { params: { id: string } }) 
                     <td>${index + 1}</td>
                     <td>${item.productDescription}</td>
                     <td>${item.hsCode || '—'}</td>
-                    <td class="text-right">${formatCurrency(parseFloat(item.rate), 'PKR')}</td>
+                    <td class="text-right">${item.rate}</td>
                     <td class="text-center">${item.uoM}</td>
                     <td class="text-right">${item.quantity}</td>
                     <td class="text-right">${formatCurrency(parseFloat(item.totalValues), 'PKR')}</td>
@@ -707,7 +708,7 @@ export default function InvoiceViewPage({ params }: { params: { id: string } }) 
                   <td class="text-right">${formatCurrency(totals.total, 'PKR')}</td>
                   <td class="text-right">${formatCurrency(totals.amount, 'PKR')}</td>
                   <td class="text-right">${formatCurrency(totals.amount, 'PKR')}</td>
-                  <td class="text-center">—</td>
+                  <td class="text-right">${formatCurrency(totals.salesTaxApplicable, 'PKR')}</td>
                   <td class="text-right">${formatCurrency(totals.tax, 'PKR')}</td>
                   <td class="text-right">${formatCurrency(totals.tax, 'PKR')}</td>
                   <td class="text-right">${formatCurrency(totals.tax, 'PKR')}</td>
@@ -820,7 +821,7 @@ export default function InvoiceViewPage({ params }: { params: { id: string } }) 
     if (!invoice) return { 
       totalValues: 0, salesExcludingST: 0, fixedValue: 0, salesTax: 0, 
       extraTax: 0, furtherTax: 0, fedPayable: 0, discount: 0, 
-      totalTax: 0, total: 0 
+      totalTax: 0, total: 0, salesTaxApplicable: 0
     }
     
     const totalValues = invoice.items.reduce((sum, item) => sum + (parseFloat(item.totalValues) || 0), 0)
@@ -831,12 +832,13 @@ export default function InvoiceViewPage({ params }: { params: { id: string } }) 
     const furtherTax = invoice.items.reduce((sum, item) => sum + (parseFloat(item.furtherTax) || 0), 0)
     const fedPayable = invoice.items.reduce((sum, item) => sum + (parseFloat(item.fedPayable) || 0), 0)
     const discount = invoice.items.reduce((sum, item) => sum + (parseFloat(item.discount) || 0), 0)
+    const salesTaxApplicable = invoice.items.reduce((sum, item) => sum + (parseFloat(item.salesTaxApplicable) || 0), 0)
     const totalTax = salesTax + extraTax + furtherTax
     const total = parseFloat(invoice.totalAmount) || 0
     
     return { 
       totalValues, salesExcludingST, fixedValue, salesTax, 
-      extraTax, furtherTax, fedPayable, discount, totalTax, total 
+      extraTax, furtherTax, fedPayable, discount, totalTax, total, salesTaxApplicable
     }
   }, [invoice])
 
@@ -1246,7 +1248,7 @@ export default function InvoiceViewPage({ params }: { params: { id: string } }) 
                             <td className="px-2 py-1 font-bold text-right text-gray-900">{formatCurrency(totals.totalValues, 'PKR')}</td>
                             <td className="px-2 py-1 font-medium text-right text-gray-900">{formatCurrency(totals.salesExcludingST, 'PKR')}</td>
                             <td className="px-2 py-1 font-medium text-right text-gray-900">{formatCurrency(totals.fixedValue, 'PKR')}</td>
-                            <td className="px-2 py-1 text-center text-gray-900">—</td>
+                            <td className="px-2 py-1 font-medium text-right text-gray-900">{formatCurrency(totals.salesTaxApplicable, 'PKR')}</td>
                             <td className="px-2 py-1 font-medium text-right text-gray-900">{formatCurrency(totals.salesTax, 'PKR')}</td>
                             <td className="px-2 py-1 font-medium text-right text-gray-900">{formatCurrency(totals.extraTax, 'PKR')}</td>
                             <td className="px-2 py-1 font-medium text-right text-gray-900">{formatCurrency(totals.furtherTax, 'PKR')}</td>
