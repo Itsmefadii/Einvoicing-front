@@ -165,8 +165,9 @@ export default function SignupPage() {
     if (!formData.email.trim()) newErrors.email = 'Email is required';
     if (!formData.password) newErrors.password = 'Password is required';
     if (!formData.confirmPassword) newErrors.confirmPassword = 'Confirm password is required';
-    if (!formData.fbrSandboxClientId.trim()) newErrors.fbrSandboxClientId = 'FBR Sandbox Token is required';
-    if (!formData.fbrProductionClientId.trim()) newErrors.fbrProductionClientId = 'FBR Production Token is required';
+    // FBR tokens are now optional
+    // if (!formData.fbrSandboxClientId.trim()) newErrors.fbrSandboxClientId = 'FBR Sandbox Token is required';
+    // if (!formData.fbrProductionClientId.trim()) newErrors.fbrProductionClientId = 'FBR Production Token is required';
 
     // Email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -608,7 +609,7 @@ export default function SignupPage() {
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <Label htmlFor="fbrSandboxClientId">FBR Sandbox Token *</Label>
+                    <Label htmlFor="fbrSandboxClientId">FBR Sandbox Token</Label>
                     <Input
                       id="fbrSandboxClientId"
                       type="text"
@@ -623,7 +624,7 @@ export default function SignupPage() {
                   </div>
 
                   <div>
-                    <Label htmlFor="fbrProductionClientId">FBR Production Client ID *</Label>
+                    <Label htmlFor="fbrProductionClientId">FBR Production Client ID</Label>
                     <Input
                       id="fbrProductionClientId"
                       type="text"
