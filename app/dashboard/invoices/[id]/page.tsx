@@ -530,11 +530,15 @@ export default function InvoiceViewPage({ params }: { params: { id: string } }) 
         
         // Generate the invoice content
         const totals = {
-          amount: parseFloat(invoice.totalAmount) || 0,
+          amount: invoice.items.reduce((sum, item) => sum + (parseFloat(item.valueSalesExcludingST) || 0), 0),
           tax: invoice.items.reduce((sum, item) => {
-            return sum + (parseFloat(item.salesTaxWithheldAtSource) || 0) + (parseFloat(item.extraTax) || 0) + (parseFloat(item.furtherTax) || 0)
+            return sum + (parseFloat(item.extraTax) || 0) + (parseFloat(item.furtherTax) || 0) + (parseFloat(item.fedPayable) + parseFloat(item.salesTaxApplicable) || 0)
           }, 0),
           salesTaxApplicable: invoice.items.reduce((sum, item) => sum + (parseFloat(item.salesTaxApplicable) || 0), 0),
+          extraTax: invoice.items.reduce((sum, item) => sum + (parseFloat(item.extraTax) || 0), 0),
+          furtherTax: invoice.items.reduce((sum, item) => sum + (parseFloat(item.furtherTax) || 0), 0),
+          fedPayable: invoice.items.reduce((sum, item) => sum + (parseFloat(item.fedPayable) || 0), 0),
+          salesTaxWithheldAtSource: invoice.items.reduce((sum, item) => sum + (parseFloat(item.salesTaxWithheldAtSource) || 0), 0),
           total: parseFloat(invoice.totalAmount) || 0
         }
 
@@ -668,7 +672,7 @@ export default function InvoiceViewPage({ params }: { params: { id: string } }) 
                   <th class="text-right">Sales Excl. ST</th>
                   <th class="text-right">Fixed Value</th>
                   <th class="text-center">Tax App</th>
-                  <th class="text-right">Sales Tax</th>
+                  <th class="text-right">Sales Tax With Held</th>
                   <th class="text-right">Extra Tax</th>
                   <th class="text-right">Further Tax</th>
                   <th class="text-center">SRO</th>
@@ -709,11 +713,11 @@ export default function InvoiceViewPage({ params }: { params: { id: string } }) 
                   <td class="text-right">${formatCurrency(totals.amount, 'PKR')}</td>
                   <td class="text-right">${formatCurrency(totals.amount, 'PKR')}</td>
                   <td class="text-right">${formatCurrency(totals.salesTaxApplicable, 'PKR')}</td>
-                  <td class="text-right">${formatCurrency(totals.tax, 'PKR')}</td>
-                  <td class="text-right">${formatCurrency(totals.tax, 'PKR')}</td>
-                  <td class="text-right">${formatCurrency(totals.tax, 'PKR')}</td>
+                  <td class="text-right">${formatCurrency(totals.salesTaxWithheldAtSource, 'PKR')}</td>
+                  <td class="text-right">${formatCurrency(totals.extraTax, 'PKR')}</td>
+                  <td class="text-right">${formatCurrency(totals.furtherTax, 'PKR')}</td>
                   <td class="text-center">—</td>
-                  <td class="text-right">${formatCurrency(0, 'PKR')}</td>
+                  <td class="text-right">${formatCurrency(totals.fedPayable, 'PKR')}</td>
                   <td class="text-right">${formatCurrency(0, 'PKR')}</td>
                   <td class="text-center">—</td>
                   <td class="text-center">—</td>

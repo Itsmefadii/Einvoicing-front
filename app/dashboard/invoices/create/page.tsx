@@ -347,19 +347,18 @@ export default function CreateInvoicePage() {
           }
           
           // Auto-calculate total values when tax fields change
-          if (field === 'valueSalesExcludingST' || field === 'salesTaxApplicable' || 
-              field === 'salesTaxWithheldAtSource' || field === 'extraTax' || 
+          if (field === 'valueSalesExcludingST' || field === 'salesTaxApplicable' || field === 'extraTax' || 
               field === 'furtherTax' || field === 'fedPayable' || field === 'discount') {
             const salesExcludingST = parseFloat(updatedItem.valueSalesExcludingST) || 0;
             const salesTaxApplicable = parseFloat(updatedItem.salesTaxApplicable) || 0;
-            const salesTaxWithheld = parseFloat(updatedItem.salesTaxWithheldAtSource) || 0;
+            // const salesTaxWithheld = parseFloat(updatedItem.salesTaxWithheldAtSource) || 0;
             const extraTaxAmount = parseFloat(updatedItem.extraTax) || 0;
             const furtherTaxAmount = parseFloat(updatedItem.furtherTax) || 0;
             const fedPayableAmount = parseFloat(updatedItem.fedPayable) || 0;
             const discountAmount = parseFloat(updatedItem.discount) || 0;
             
             // Total = Sales Excluding ST + Sales Tax Applicable + Sales Tax + Extra Tax + Further Tax + FED Payable - Discount
-            const totalValue = salesExcludingST + salesTaxApplicable + salesTaxWithheld + 
+            const totalValue = salesExcludingST + salesTaxApplicable + 
                              extraTaxAmount + furtherTaxAmount + fedPayableAmount - discountAmount;
             updatedItem.totalValues = totalValue.toString();
           }
@@ -373,7 +372,7 @@ export default function CreateInvoicePage() {
 
   const calculateTotals = () => {
     const subtotal = form.items.reduce((sum, item) => sum + (parseFloat(item.valueSalesExcludingST) || 0), 0);
-    const taxAmount = form.items.reduce((sum, item) => sum + (parseFloat(item.salesTaxApplicable) || 0) + (parseFloat(item.salesTaxWithheldAtSource) || 0) + (parseFloat(item.extraTax) || 0) + (parseFloat(item.furtherTax) || 0), 0);
+    const taxAmount = form.items.reduce((sum, item) => sum + (parseFloat(item.salesTaxApplicable) || 0) + (parseFloat(item.extraTax) || 0) + (parseFloat(item.furtherTax) || 0) + (parseFloat(item.fedPayable) || 0), 0);
     const total = form.items.reduce((sum, item) => sum + (parseFloat(item.totalValues) || 0), 0);
     return { subtotal, taxAmount, total };
   };
@@ -785,7 +784,7 @@ export default function CreateInvoicePage() {
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Sales Tax</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Sales Tax With Held</label>
                       <Input
                         type="number"
                         value={item.salesTaxWithheldAtSource}
